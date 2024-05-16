@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>Tokenizer</title>
+    <script>
+        function approximate_token_length(text) {
+            // Split the text into words
+            const words = text.split(' ');
+
+            // Initialize the token length
+            let token_length = 0;
+
+            for (const word of words) {
+                // Increment token length for each word
+                token_length += 1;
+
+                // Approximate subword tokenization
+                if (word.length > 4) {
+                    token_length += Math.floor(word.length / 4);
+                }
+            }
+
+            token_length += text.split('').filter(char => !char.match(/[a-zA-Z0-9\s]/)).length;
+
+            return token_length;
+        }
+
+        function updateCounts() {
+            const text = document.getElementById('textInput').value;
+            const tokenCount = approximate_token_length(text);
+            const charCount = text.length;
+
+            document.getElementById('tokenCount').textContent = tokenCount;
+            document.getElementById('charCount').textContent = charCount;
+        }
+    </script>
+</head>
+<body>
+    <div class="page-body page-tokenizer">
+        <div class="page-header">
+            <h1>Tokenizer</h1>
+        </div>
+        <h3>Learn about language model tokenization</h3>
+        <p>Enter some text to see how it might be tokenized by a language model and the total count of tokens.</p>
+        <div class="tokenizer-input">
+            <textarea id="textInput" class="text-input text-input-md" placeholder="Enter some text" oninput="updateCounts()"></textarea>
+        </div>
+        <div class="tokenizer-input-actions">
+            <button type="button" onclick="document.getElementById('textInput').value = ''; updateCounts()">Clear</button>
+        </div>
+        <div class="tokenizer-stats">
+            <div class="tokenizer-stat">
+                <div class="tokenizer-stat-title">Tokens</div>
+                <div id="tokenCount" class="tokenizer-stat-val">0</div>
+            </div>
+            <div class="tokenizer-stat">
+                <div class="tokenizer-stat-title">Characters</div>
+                <div id="charCount" class="tokenizer-stat-val">0</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
