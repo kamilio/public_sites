@@ -121,16 +121,18 @@
                 dependencyBotsRender.innerHTML = '';
 
                 for (const botName in state) {
+                    const sanitizedBotName = botName.replace(/\s+/g, '_');
+                    
                     const botBlock = document.createElement('div');
                     botBlock.classList.add('card', 'bg-base-100', 'shadow-xl', 'mb-4');
                     botBlock.innerHTML = `
                         <div class="card-body">
                             <h2 class="card-title">${botName}</h2>
-                            <div id="charge-list-${botName}"></div>
+                            <div id="charge-list-${sanitizedBotName}"></div>
                         </div>
                     `;
 
-                    const chargeList = botBlock.querySelector(`#charge-list-${botName}`);
+                    const chargeList = botBlock.querySelector(`#charge-list-${sanitizedBotName}`);
                     for (const charge of state[botName]) {
                         const chargeRow = document.createElement('div');
                         chargeRow.classList.add('flex', 'justify-between', 'mb-2');
