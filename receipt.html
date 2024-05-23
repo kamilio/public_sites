@@ -23,10 +23,30 @@
     <form id="bot-form">
         <div id="bot-container"></div>
         <button type="button" onclick="addBot()">Add Bot</button>
+        <button type="button" onclick="renderBots()">Render</button>
     </form>
     <div id="render-container"></div>
 
     <script>
+        let state = {
+            "ChatGPT": [
+                {
+                    "reason": "**Input tokens** (1241)",
+                    "amount": 150
+                },
+                { 
+                    "reason": "**Output tokens** (flat)",
+                    "amount": 50
+                }
+            ], 
+            "SDXL": [
+                { 
+                    "reason": "**Flat image price**",
+                    "amount": 50
+                }
+            ],
+        };
+
         let botCounter = 0;
 
         function addBot() {
@@ -54,27 +74,41 @@
             chargeContainer.appendChild(chargeDiv);
         }
 
-        function renderBots() {
-            const renderContainer = document.getElementById('render-container');
-            renderContainer.innerHTML = '';
+        function updateState() {
+            state = {};
 
             for (let i = 1; i <= botCounter; i++) {
                 const botName = document.getElementById(`bot-name-${i}`).value;
                 const chargeContainer = document.getElementById(`charge-container-${i}`);
 
+                state[botName] = [];
+
+                for (let j = 0; j < chargeContainer.children.length; j++) {
+                    const reason = document.getElementById(`reason-${i}-${j}`).value;
+                    const amount = parseInt(document.getElementById(`amount-${i}-${j}`).value);
+
+                    state[botName].push({ reason, amount });
+                }
+            }
+        }
+
+        function renderBots() {
+            updateState();
+
+            const renderContainer = document.getElementById('render-container');
+            renderContainer.innerHTML = '';
+
+            for (const botName in state) {
                 const botBlock = document.createElement('div');
                 botBlock.classList.add('bot-block');
                 botBlock.innerHTML = `<h2>${botName}</h2>`;
 
-                for (let j = 0; j < chargeContainer.children.length; j++) {
-                    const reason = document.getElementById(`reason-${i}-${j}`).value;
-                    const amount = document.getElementById(`amount-${i}-${j}`).value;
-
+                for (const charge of state[botName]) {
                     const chargeRow = document.createElement('div');
                     chargeRow.classList.add('charge-row');
                     chargeRow.innerHTML = `
-                        <div>${marked.parse(reason)}</div>
-                        <div>${amount}</div>
+                        <div>${marked.parse(charge.reason)}</div>
+                        <div>${charge.amount}</div>
                     `;
                     botBlock.appendChild(chargeRow);
                 }
@@ -83,10 +117,25 @@
             }
         }
 
-        document.getElementById('bot-form').addEventListener('submit', function (e) {
-            e.preventDefault();
-            renderBots();
-        });
+        function initializeForm() {
+            document.getElementById('bot-container').innerHTML = '';
+            botCounter = 0;
+
+            for (const botName in state) {
+                addBot();
+                document.getElementById(`bot-name-${botCounter}`).value = botName;
+
+                for (const charge of state[botName]) {
+                    addCharge(botCounter);
+                    const chargeContainer = document.getElementById(`charge-container-${botCounter}`);
+                    const chargeIndex = chargeContainer.children.length - 1;
+                    document.getElementById(`reason-${botCounter}-${chargeIndex}`).value = charge.reason;
+                    document.getElementById(`amount-${botCounter}-${chargeIndex}`).value = charge.amount;
+                }
+            }
+        }
+
+        initializeForm();
     </script>
 </body>
 </html>
