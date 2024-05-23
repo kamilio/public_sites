@@ -3,24 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Bot Interaction Prototype</title>
+    <title>Bot Receipt Prototype</title>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@2.51.6/dist/full.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <div class="container mx-auto p-4">
-        <h1 class="text-4xl font-bold mb-4">AI Bot Interaction Prototype</h1>
+        <h1 class="text-4xl font-bold mb-4">Bot Receipt Prototype</h1>
         <form id="bot-form">
             <div id="bot-container" class="space-y-4"></div>
             <button type="button" class="btn btn-primary mt-4" onclick="addBot()">Add Bot</button>
         </form>
         <div id="render-container" class="mt-8">
-            <h2 class="text-2xl font-bold mb-4">Full content</h2>
+            <h2 class="text-2xl font-bold mb-4">System bots</h2>
             <div id="full-content-render"></div>
             <h2 class="text-2xl font-bold mt-8 mb-4">Dependency bots</h2>
             <div class="card bg-base-100 shadow-xl">
                 <div class="card-body">
+                    <h2 class="card-title">CustomServerBot</h2>
                     <div id="dependency-bots-render" class="space-y-2"></div>
                 </div>
             </div>
@@ -31,18 +32,22 @@
         let state = {
             "ChatGPT": [
                 {
-                    "reason": "**Input tokens** (1241)",
+                    "reason": "**Chat history** (1230 tokens)",
+                    "amount": 290
+                },
+                {
+                    "reason": "**Input** (1241 tokens)",
                     "amount": 150
                 },
                 { 
-                    "reason": "**Output tokens** (flat)",
+                    "reason": "**Output** (flat)",
                     "amount": 50
                 }
             ], 
             "SDXL": [
                 { 
                     "reason": "**Flat image price**",
-                    "amount": 50
+                    "amount": 250
                 }
             ],
         };
