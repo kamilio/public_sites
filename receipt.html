@@ -18,8 +18,18 @@
         <div id="render-container" class="mt-8">
             <h2 class="text-2xl font-bold mb-4">System bots</h2>
             <div id="full-content-render"></div>
-            <h2 class="text-2xl font-bold mt-8 mb-4">Dependency bots</h2>
-            <div id="dependency-bots-render" class="space-y-2"></div>
+            <div class="card bg-base-100 shadow-xl mt-8">
+                <div class="card-body">
+                    <h2 class="text-2xl font-bold card-title mb-4">Server bot</h2>
+                    <div id="dependency-bots-render"></div>
+                </div>
+            </div>
+            <div class="card bg-base-100 shadow-xl mt-8">
+                <div class="card-body">
+                    <h2 class="text-2xl font-bold card-title mb-4">Python Code</h2>
+                    <pre><code id="python-code-render"></code></pre>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -116,44 +126,50 @@
             fullContentRender.innerHTML = '';
 
             const dependencyBotsRender = document.getElementById('dependency-bots-render');
-            
-            if (dependencyBotsRender) {
-                dependencyBotsRender.innerHTML = '';
+            dependencyBotsRender.innerHTML = '';
 
-                for (const botName in state) {
-                    const sanitizedBotName = botName.replace(/\s+/g, '_');
-                    
-                    const botBlock = document.createElement('div');
-                    botBlock.classList.add('card', 'bg-base-100', 'shadow-xl', 'mb-4');
-                    botBlock.innerHTML = `
-                        <div class="card-body">
-                            <h2 class="card-title">${botName}</h2>
-                            <div id="charge-list-${sanitizedBotName}"></div>
-                        </div>
+            const pythonCodeRender = document.getElementById('python-code-render');
+            pythonCodeRender.textContent = '';
+
+            for (const botName in state) {
+                const sanitizedBotName = botName.replace(/\s+/g, '_');
+
+                const botBlock = document.createElement('div');
+                botBlock.classList.add('card', 'bg-base-100', 'shadow-xl', 'mb-4');
+                botBlock.innerHTML = `
+                    <div class="card-body">
+                        <h2 class="card-title">${botName}</h2>
+                        <div id="charge-list-${sanitizedBotName}"></div>
+                    </div>
+                `;
+
+                const chargeList = botBlock.querySelector(`#charge-list-${sanitizedBotName}`);
+                for (const charge of state[botName]) {
+                    const chargeRow = document.createElement('div');
+                    chargeRow.classList.add('flex', 'justify-between', 'mb-2');
+                    chargeRow.innerHTML = `
+                        <div>${marked.parse(charge.reason)}</div>
+                        <div>${charge.amount}</div>
                     `;
-
-                    const chargeList = botBlock.querySelector(`#charge-list-${sanitizedBotName}`);
-                    for (const charge of state[botName]) {
-                        const chargeRow = document.createElement('div');
-                        chargeRow.classList.add('flex', 'justify-between', 'mb-2');
-                        chargeRow.innerHTML = `
-                            <div>${marked.parse(charge.reason)}</div>
-                            <div>${charge.amount}</div>
-                        `;
-                        chargeList.appendChild(chargeRow);
-                    }
-
-                    fullContentRender.appendChild(botBlock.cloneNode(true));
-
-                    const dependencyBotRow = document.createElement('div');
-                    dependencyBotRow.classList.add('flex', 'justify-between');
-                    dependencyBotRow.innerHTML = `
-                        <div>${botName}</div>
-                        <div>${state[botName].reduce((sum, charge) => sum + charge.amount, 0)}</div>
-                    `;
-
-                    dependencyBotsRender.appendChild(dependencyBotRow);
+                    chargeList.appendChild(chargeRow);
                 }
+
+                fullContentRender.appendChild(botBlock);
+
+                const dependencyBotRow = document.createElement('div');
+                dependencyBotRow.classList.add('flex', 'justify-between', 'mb-2');
+                dependencyBotRow.innerHTML = `
+                    <div>${botName}</div>
+                    <div>${state[botName].reduce((sum, charge) => sum + charge.amount, 0)}</div>
+                `;
+
+                dependencyBotsRender.appendChild(dependencyBotRow);
+
+                pythonCodeRender.textContent += `# ${botName}\n`;
+                for (const charge of state[botName]) {
+                    pythonCodeRender.textContent += `charge(${charge.amount}, "${charge.reason}")\n`;
+                }
+                pythonCodeRender.textContent += '\n';
             }
         }
 
