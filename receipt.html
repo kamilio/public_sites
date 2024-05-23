@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Bot Interaction Prototype</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        .bot-block {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        .charge-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>AI Bot Interaction Prototype</h1>
+    <form id="bot-form">
+        <div id="bot-container"></div>
+        <button type="button" onclick="addBot()">Add Bot</button>
+    </form>
+    <div id="render-container"></div>
+
+    <script>
+        let botCounter = 0;
+
+        function addBot() {
+            botCounter++;
+            const botDiv = document.createElement('div');
+            botDiv.innerHTML = `
+                <h2>Bot ${botCounter}</h2>
+                <label for="bot-name-${botCounter}">Bot Name:</label>
+                <input type="text" id="bot-name-${botCounter}" required>
+                <div id="charge-container-${botCounter}"></div>
+                <button type="button" onclick="addCharge(${botCounter})">Add Charge</button>
+            `;
+            document.getElementById('bot-container').appendChild(botDiv);
+        }
+
+        function addCharge(botId) {
+            const chargeContainer = document.getElementById(`charge-container-${botId}`);
+            const chargeDiv = document.createElement('div');
+            chargeDiv.innerHTML = `
+                <label for="reason-${botId}-${chargeContainer.children.length}">Reason:</label>
+                <textarea id="reason-${botId}-${chargeContainer.children.length}" required></textarea>
+                <label for="amount-${botId}-${chargeContainer.children.length}">Amount:</label>
+                <input type="number" id="amount-${botId}-${chargeContainer.children.length}" required>
+            `;
+            chargeContainer.appendChild(chargeDiv);
+        }
+
+        function renderBots() {
+            const renderContainer = document.getElementById('render-container');
+            renderContainer.innerHTML = '';
+
+            for (let i = 1; i <= botCounter; i++) {
+                const botName = document.getElementById(`bot-name-${i}`).value;
+                const chargeContainer = document.getElementById(`charge-container-${i}`);
+
+                const botBlock = document.createElement('div');
+                botBlock.classList.add('bot-block');
+                botBlock.innerHTML = `<h2>${botName}</h2>`;
+
+                for (let j = 0; j < chargeContainer.children.length; j++) {
+                    const reason = document.getElementById(`reason-${i}-${j}`).value;
+                    const amount = document.getElementById(`amount-${i}-${j}`).value;
+
+                    const chargeRow = document.createElement('div');
+                    chargeRow.classList.add('charge-row');
+                    chargeRow.innerHTML = `
+                        <div>${marked.parse(reason)}</div>
+                        <div>${amount}</div>
+                    `;
+                    botBlock.appendChild(chargeRow);
+                }
+
+                renderContainer.appendChild(botBlock);
+            }
+        }
+
+        document.getElementById('bot-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            renderBots();
+        });
+    </script>
+</body>
+</html>
