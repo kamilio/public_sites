@@ -214,7 +214,8 @@
 
                 pythonCodeRender.textContent += `# ${botName}\n`;
                 for (const charge of state[botName]) {
-                    pythonCodeRender.textContent += `charge(${charge.amount}, "${charge.reason}")\n`;
+                    
+                    pythonCodeRender.textContent += `charge(${charge.amount}, """${charge.reason}""")\n`;
                 }
                 pythonCodeRender.textContent += '\n';
             }
