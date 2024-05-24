@@ -7,6 +7,23 @@
     <link href="https://cdn.jsdelivr.net/npm/daisyui@2.51.6/dist/full.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        table {
+            width: 100%;
+            margin-bottom: 1rem;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
 </head>
 <body>
     <div class="container mx-auto p-4">
@@ -47,7 +64,7 @@
                 { 
                     "reason": "**Output** (flat)",
                     "amount": 50
-                }
+                },
             ], 
             "SDXL": [
                 { 
@@ -55,6 +72,36 @@
                     "amount": 250
                 }
             ],
+            "Whisper": [
+                {
+                "reason": "**Audio transcription**\n\nTranscribed 30 minutes of audio",
+                "amount": 500
+                },
+                {
+                "reason": "**Language detection**\n\nDetected English and Spanish in the audio",
+                "amount": 100
+                }
+            ],
+            "VideoGen": [
+            {
+            "reason": "**Video generation**\n\n| Resolution | Length | FPS |\n|------------|--------|-----|\n| 1920x1080  | 30 sec | 30  |\n| 1280x720   | 60 sec | 24  |\n\nGenerated 2 videos with different resolutions, lengths, and frame rates",
+            "amount": 800
+            },
+            {
+            "reason": "**Video editing**\n\nApplied color correction and added transitions to the generated videos",
+            "amount": 250
+            }],
+            "DALL-E": [
+            {
+            "reason": "**Image generation**\n\n![Generated Image](https://pfst.cf2.poecdn.net/base/image/83bdbab456ef93ceec5196e233f3fb8a921b9ee3915b1a4994c90b0b78506775?w=1024&h=1024&pmaid=87206985)\n\nGenerated a 512x512 image of a futuristic city",
+            "amount": 400
+            },
+            {
+            "reason": "**Image variation**\n\nCreated 3 variations of the original image",
+            "amount": 150
+            }
+        ],
+    
         };
 
         let botCounter = 0;
