@@ -90,9 +90,25 @@ charge({amount: 0.1, reason: "Input tokens"}, {amount: 0.05, reason: "Output tok
                 threshold: 5000,
                 code: `// Image gen bot
 loading(900);
-hold({amount: 0.1, reason: "Image generation (flat)"});
+hold({amount: 0.1, reason: "Image generation (flat), intent: "exact"});
 image("https:\/\/pfst.cf2.poecdn.net/base/image/83bdbab456ef93ceec5196e233f3fb8a921b9ee3915b1a4994c90b0b78506775?w=1024&h=1024&pmaid=87206985");
 charge({amount: 0.1, reason: "Image generation (flat)"});
+`
+            },
+
+            payAsYouGoBot: {
+                label: "Pay as you go bot",
+                totalPoints: 20000,
+                threshold: 5000,
+                code: `// Bot keeps charging
+loading(900);
+charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message", intent: "ongoing"});
+charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message", intent: "ongoing"});
+charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message", intent: "ongoing"});
+charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message", intent: "ongoing"});
+loading(900);
+charge({amount: ${computePointsToUSD(10000)}, reason: "GPT-4 Message", intent: "ongoing"});
+stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
 `
             }
         };
@@ -107,6 +123,7 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
             for (const [tabId, tabConfig] of Object.entries(tabsConfig)) {
                 const tabElement = document.createElement("a");
                 tabElement.className = "tab tab-lifted";
+                tabElement.href = `#${tabId}`;
                 tabElement.textContent = tabConfig.label;
                 tabElement.setAttribute("data-tab-id", tabId);
                 tabElement.addEventListener("click", () => {
@@ -120,6 +137,16 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
             // Activate the first tab by default
             tabsElement.firstChild.classList.add("tab-active");
             renderTabContent(Object.keys(tabsConfig)[0]);
+            openTabFromUrl()
+        }
+
+        function openTabFromUrl() {
+            // Activate tab based on URL hash
+const hash = window.location.hash;
+if (hash) {
+  const tabId = hash.slice(1); // remove #
+  document.querySelector(`[data-tab-id="${tabId}"]`)?.click(); 
+}
         }
 
         function renderTabContent(tabId) {
@@ -153,34 +180,33 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
 
             switch (intent) {
                 case 'exact':
-                    return `The message is going to cost exactly ${sum} compute points.`;
+                    return `The message is going to cost exactly ${amount} compute points.`;
                 case 'max':
-                    return `The message is going to cost up to ${sum} compute points.`;
+                    return `The message is going to cost up to ${amount} compute points.`;
                 case 'ongoing':
-                    return `The message will cost ${sum} compute points but the price might increase in the future.`;
+                    return `The message will cost ${amount} compute points but the price might increase in the future.`;
                 default:
                     return `${botName} will exceed your message point limit.`;
             }
         }
 
 
-        function alertModalTemplate(triggeredHolds, currentHold, chargedItems) {
-    
-            const intentMessage = getIntentMessage(triggeredHolds);
+        function alertModalTemplate({transactionTriggers, total_holds_only_approved, charges}) {
+            const intentMessage = getIntentMessage(transactionTriggers, [...charges, ...transactionTriggers].reduce((sum, charge) => sum + charge.amount, 0));
 
             return `
                 <h3 class="font-bold text-lg mb-2">${intentMessage}</h3>
 
-                <div id="triggeredHoldsSection" style="display: ${triggeredHolds.length > 0 ? 'block' : 'none'}">
+                <div id="triggeredHoldsSection" style="display: ${transactionTriggers.length > 0 ? 'block' : 'none'}">
                     <strong class="mb-2">Upcoming charges</strong>
-                    ${receiptTemplate(triggeredHolds, [])}
+                    ${receiptTemplate(transactionTriggers, [])}
                 </div>
-                <div id="currentHoldSection" style="display: ${currentHold > 0 ? 'block' : 'none'}" class="mt-4">
-                    <strong>Current Hold:</strong> <span id="currentHold">${currentHold} compute points (${computePointsToUSD(currentHold)})</span>
+                <div id="currentHoldSection" style="display: ${total_holds_only_approved > 0 ? 'block' : 'none'}" class="mt-4">
+                    <strong>Current Hold:</strong> <span id="currentHold">${total_holds_only_approved} compute points</span>
                 </div>
-                <div id="chargedItemsSection" style="display: ${chargedItems.length > 0 ? 'block' : 'none'}" class="mt-2">
+                <div id="chargedItemsSection" style="display: ${charges.length > 0 ? 'block' : 'none'}" class="mt-2">
                     <strong class="mb-2">Already charged</strong>
-                    ${receiptTemplate(chargedItems, [])}
+                    ${receiptTemplate(charges, [])}
                 </div>
 
                 <div class="mt-8">
@@ -374,7 +400,7 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
                 newThreshold = Math.max(parseInt(threshold) + parseInt(originalThreshold), total_holds, total_charges);
 
                 transactionTriggers = transactionTriggers.map(trigger => ({ ...trigger, transactionType }));
-                document.getElementById("alertContent").innerHTML = alertModalTemplate(transactionTriggers, total_holds_only_approved, charges);
+                document.getElementById("alertContent").innerHTML = alertModalTemplate({transactionTriggers, total_holds_only_approved, charges});
                 document.getElementById("alertModal").classList.add("modal-open");
                 alertShown = { transactionType, transactionTriggers, onProceed, onCancel };
             } else {
