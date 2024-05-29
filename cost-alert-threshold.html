@@ -26,46 +26,22 @@
                 <h2 class="text-xl font-bold mb-4">API Documentation</h2>
                 <ul class="list-disc pl-6 pr-4">
                     <li>
-                        <code>charge(...objs: {amount: number, reason: string}[])</code>: Records charges with specified
-                        amounts in USD and reasons. The amounts are converted to compute points (20 USD = 1 million
-                        compute points).
-                        <pre class="mt-2 ml-4">charge(
-            {amount: 0.05, reason: "API call"},
-            {amount: 0.1, reason: "Database query"}
-            ); // 1000 compute points, 2000 compute points</pre>
+                        <code>charge(...objs: {amount: number, reason: string}[], intent: "exact" | "max" | "ongoing")</code>
                     </li>
                     <li class="mt-4">
-                        <code>hold(...objs: {amount: number, reason: string}[])</code>: Records holds with specified
-                        amounts in USD and reasons. The amounts are converted to compute points (20 USD = 1 million
-                        compute points).
-                        <pre class="mt-2 ml-4">hold(
-            {amount: 1, reason: "Image generation"},
-            {amount: 0.5, reason: "Text generation"}
-            ); // 20000 compute points, 10000 compute points</pre>
+                        <code>hold(...objs: {amount: number, reason: string}[], intent: "exact" | "max" | "ongoing")</code>
                     </li>
                     <li class="mt-4">
-                        <code>stream(text: string, length: number)</code>: Streams the provided text to the output,
-                        displaying it word by word until the specified length is reached.
-                        <pre class="mt-2 ml-4">stream(
-            "Hello world! This is a streaming output example.",
-            30
-            ); // Streams the text up to 30 characters</pre>
+                        <code>stream(text: string, length: number)</code>
                     </li>
                     <li class="mt-4">
-                        <code>loading(ms: number)</code>: Simulates a loading state by blocking execution for the
-                        specified number of milliseconds.
-                        <pre class="mt-2 ml-4">loading(2000); // Blocks execution for 2 seconds</pre>
+                        <code>loading(ms: number)</code>
                     </li>
-                    <li class="mt-4"> <code>image(url: string)</code>: Displays an image from the provided URL in the
-                        output area.
-                        <pre
-                            class="mt-2 ml-4">image( "https://pfst.cf2.poecdn.net/base/image/83bdbab456ef93ceec5196e233f3fb8a921b9ee3915b1a4994c90b0b78506775?w=1024&h=1024&pmaid=87206985" ); // Displays the image from the specified URL</pre>
+                    <li class="mt-4"> <code>image(url: string)</code>
                     </li>
-                    <li class="mt-4"> <code>clear()</code>: Clears the content of the output area.
-                        <pre class="mt-2 ml-4">clear(); // Clears the output area</pre>
+                    <li class="mt-4"> <code>clear()</code>
                     </li>
-                    <li class="mt-4"> <code>print(text: string)</code>: Prints the provided text to the output area.
-                        <pre class="mt-2 ml-4">print( "Hello, World!" ); // Prints the text to the output area</pre>
+                    <li class="mt-4"> <code>print(text: string)</code>
                     </li>
                 </ul>
             </div>
@@ -102,7 +78,7 @@
                 threshold: 5000,
                 code: `// System Bot
 loading(900);
-hold({amount: 0.1, reason: "Input tokens"}, {amount: 0.05, reason: "Output tokens"}, {amount: 0.3, reason: "Chat history"});
+hold({amount: 0.1, reason: "Input tokens", intent: "exact"}, {amount: 0.05, reason: "Output tokens"}, {amount: 0.3, reason: "Chat history"});
 stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
 charge({amount: 0.1, reason: "Input tokens"}, {amount: 0.05, reason: "Output tokens"}, {amount: 0.3, reason: "Chat history"});
 `
@@ -168,25 +144,47 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
             });
         }
 
+        function getIntentMessage(triggeredHolds, amount) {
+            const botName = getActiveBotLabel();
+            const firstTriggeredHold = triggeredHolds[0];
+            const sum = triggeredHolds.reduce((sum, hold) => sum + hold.amount, 0);
+
+            const { intent } = firstTriggeredHold;
+
+            switch (intent) {
+                case 'exact':
+                    return `The message is going to cost exactly ${sum} compute points.`;
+                case 'max':
+                    return `The message is going to cost up to ${sum} compute points.`;
+                case 'ongoing':
+                    return `The message will cost ${sum} compute points but the price might increase in the future.`;
+                default:
+                    return `${botName} will exceed your message point limit.`;
+            }
+        }
+
 
         function alertModalTemplate(triggeredHolds, currentHold, chargedItems) {
-            const botName = getActiveBotLabel();
+    
+            const intentMessage = getIntentMessage(triggeredHolds);
+
             return `
-                <h3 class="font-bold text-lg mb-2">${botName} will exceed your message point limit</h3>
+                <h3 class="font-bold text-lg mb-2">${intentMessage}</h3>
+
                 <div id="triggeredHoldsSection" style="display: ${triggeredHolds.length > 0 ? 'block' : 'none'}">
-                    <strong>Threshold Triggered By:</strong>
-                    <ul id="triggeredHolds" class="list-disc pl-6">
-                        ${triggeredHolds.map(hold => `<li>${hold.transactionType === "charge" ? "Charge: " : "Hold: "}${hold.reason}: ${hold.amount} compute points (${computePointsToUSD(hold.amount)})</li>`).join('')}
-                    </ul>
+                    <strong class="mb-2">Upcoming charges</strong>
+                    ${receiptTemplate(triggeredHolds, [])}
                 </div>
                 <div id="currentHoldSection" style="display: ${currentHold > 0 ? 'block' : 'none'}" class="mt-4">
                     <strong>Current Hold:</strong> <span id="currentHold">${currentHold} compute points (${computePointsToUSD(currentHold)})</span>
                 </div>
                 <div id="chargedItemsSection" style="display: ${chargedItems.length > 0 ? 'block' : 'none'}" class="mt-2">
-                    <strong>Already Charged Items:</strong>
-                    <ul id="chargedItems" class="list-disc pl-6">
-                        ${chargedItems.map(charge => `<li>${charge.reason}: ${charge.amount} compute points (${computePointsToUSD(charge.amount)})</li>`).join('')}
-                    </ul>
+                    <strong class="mb-2">Already charged</strong>
+                    ${receiptTemplate(chargedItems, [])}
+                </div>
+
+                <div class="mt-8">
+                    <strong>Set new message point limit ${newThreshold}</strong>
                 </div>
             `;
         }
@@ -231,6 +229,16 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
             return (computePoints / 20000).toFixed(2);
         }
 
+        function validateIntent(intent) {
+            if (!intent) {
+                return;
+            }
+
+            if (!["exact", "max", "ongoing"].includes(intent)) {
+                throw new Error("Invalid intent");
+            }
+        }
+
         let total_compute_points = 0;
         let charges = [];
         let holds = [];
@@ -238,11 +246,13 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
         let currentLine = 0;
         let lines = [];
         let originalThreshold = 0;
+        let newThreshold = null;
 
         function charge(...objs) {
             const unapprovedCharges = objs.map(obj => {
                 const compute_points = usdToComputePoints(obj.amount);
-                return { reason: obj.reason, amount: compute_points };
+                validateIntent(obj.intent);
+                return { ...obj, amount: compute_points };
             });
 
             checkThreshold("charge", unapprovedCharges, {
@@ -258,7 +268,8 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
         function hold(...objs) {
             const unapprovedHolds = objs.map(obj => {
                 const compute_points = usdToComputePoints(obj.amount);
-                return { reason: obj.reason, amount: compute_points };
+                validateIntent(obj.intent);
+                return { ...obj, amount: compute_points };
             });
             checkThreshold("hold", unapprovedHolds, {
                 onProceed() {
@@ -335,7 +346,7 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
 
         function checkThreshold(transactionType, transactionTriggers = [], { onProceed = null, onCancel = null }) {
             const tabId = document.querySelector(".tab-active").getAttribute("data-tab-id");
-            const threshold = document.getElementById(`threshold-${tabId}`).value;
+
             const chargesWithUnapproved = transactionType === "charge" ? [...charges, ...transactionTriggers] : charges;
             const total_charges = chargesWithUnapproved.reduce((sum, charge) => sum + charge.amount, 0);
 
@@ -343,8 +354,24 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
             let total_holds = holdsWithUnapproved.reduce((sum, hold) => sum + hold.amount, 0);
             let total_holds_only_approved = holds.reduce((sum, hold) => sum + hold.amount, 0);
 
+            // total limit
+            const totalPoints = parseInt(document.getElementById(`totalPoints-${tabId}`).value);
+            if (total_charges > totalPoints || total_holds > totalPoints) {
+                document.getElementById("output").innerHTML = `<pre class="text-error">Alert: Charges/holds exceed ${totalPoints} compute points!</pre>`;
+                alertShown = { transactionType, transactionTriggers, onProceed, onCancel };
+                return
+            }
+
+
+            
+            const threshold = document.getElementById(`threshold-${tabId}`).value;
+
+
             if ((transactionType === "charge" && total_charges > total_holds && total_charges > threshold && !alertShown) ||
                 (transactionType === "hold" && total_holds > threshold && !alertShown)) {
+
+                console.log({originalThreshold, total_holds, total_charges, threshold})
+                newThreshold = Math.max(parseInt(threshold) + parseInt(originalThreshold), total_holds, total_charges);
 
                 transactionTriggers = transactionTriggers.map(trigger => ({ ...trigger, transactionType }));
                 document.getElementById("alertContent").innerHTML = alertModalTemplate(transactionTriggers, total_holds_only_approved, charges);
@@ -361,12 +388,6 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
 
         async function executeCode(tabId) {
             for (currentLine; currentLine < lines.length; currentLine++) {
-                const totalPoints = parseInt(document.getElementById(`totalPoints-${tabId}`).value);
-                if (charges.reduce((sum, charge) => sum + charge.amount, 0) > totalPoints || holds.reduce((sum, hold) => sum + hold.amount, 0) > totalPoints) {
-                    document.getElementById("output").innerHTML = `<pre class="text-error">Alert: Charges/holds exceed ${totalPoints} compute points ($${computePointsToUSD(totalPoints)})!</pre>`;
-                    break
-                }
-
                 let line = lines[currentLine].trim();
                 if (line.startsWith("charge(")) {
                     await eval(line);
@@ -407,6 +428,7 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
             console.clear();
 
             originalThreshold = parseInt(document.getElementById(`threshold-${tabId}`).value);
+            newThreshold = null;
 
             document.getElementById(`run-${tabId}`).disabled = true;
             executeCode(tabId);
@@ -422,8 +444,7 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
             alertShown = null;
 
             // Increase the alert threshold to the next multiple of the original value
-            let currentThreshold = parseInt(document.getElementById(`threshold-${tabId}`).value);
-            let newThreshold = Math.ceil(currentThreshold / originalThreshold) * originalThreshold;
+            
             document.getElementById(`threshold-${tabId}`).value = newThreshold;
 
             executeCode(tabId);
@@ -437,7 +458,7 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
 
             document.getElementById("alertModal").classList.remove("modal-open");
             let total_charges = charges.reduce((sum, charge) => sum + charge.amount, 0);
-            document.getElementById("output").innerHTML += `<pre class="text-error">Execution stopped due to threshold exceeded. Total charges incurred: ${total_charges} compute points ($${computePointsToUSD(total_charges)}).</pre>`;
+            document.getElementById("output").innerHTML = `<pre class="text-error">Execution stopped due to threshold exceeded. <br><br>Total charges incurred: ${total_charges} compute points.</pre>`;
             document.getElementById(`run-${tabId}`).disabled = false;
         });
 
