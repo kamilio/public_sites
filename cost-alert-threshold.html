@@ -83,9 +83,9 @@
                 threshold: 5000,
                 code: `// System Bot
 loading(900);
-hold({amount: 0.1, reason: "Input tokens", intent: "exact"}, {amount: 0.05, reason: "Output tokens"}, {amount: 0.3, reason: "Chat history"});
+hold({amount: 1000, reason: "Input tokens", intent: "exact"}, {amount: 2000, reason: "Output tokens"}, {amount: 2200, reason: "Chat history"});
 stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
-charge({amount: 0.1, reason: "Input tokens"}, {amount: 0.05, reason: "Output tokens"}, {amount: 0.3, reason: "Chat history"});
+charge({amount: 1000, reason: "Input tokens"}, {amount: 2000, reason: "Output tokens"}, {amount: 2200, reason: "Chat history"});
 `
             },
 
@@ -95,9 +95,9 @@ charge({amount: 0.1, reason: "Input tokens"}, {amount: 0.05, reason: "Output tok
                 threshold: 5000,
                 code: `// Image gen bot
 loading(900);
-hold({amount: 0.1, reason: "Image generation (flat), intent: "exact"});
+hold({amount: 1000, reason: "Image generation (flat)", intent: "exact"});
 image("https:\/\/pfst.cf2.poecdn.net/base/image/83bdbab456ef93ceec5196e233f3fb8a921b9ee3915b1a4994c90b0b78506775?w=1024&h=1024&pmaid=87206985");
-charge({amount: 0.1, reason: "Image generation (flat)"});
+charge({amount: 1000, reason: "Image generation (flat)"});
 `
             },
 
@@ -107,12 +107,12 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
                 threshold: 5000,
                 code: `// Bot keeps charging
 loading(900);
-charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message"});
-charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message"});
-charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message"});
-charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message"});
+charge({amount: 2000, reason: "ChatGPT Message"});
+charge({amount: 2000, reason: "ChatGPT Message"});
+charge({amount: 2000, reason: "ChatGPT Message"});
+charge({amount: 2000, reason: "ChatGPT Message"});
 loading(900);
-charge({amount: ${computePointsToUSD(10000)}, reason: "GPT-4 Message"});
+charge({amount: 10000, reason: "GPT-4 Message"});
 stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
 `
             },
@@ -122,9 +122,9 @@ stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nu
                 threshold: 5000,
                 code: `// Generous estimate
 loading(900);
-hold({amount: ${computePointsToUSD(10000)}, reason: "Input tokens", intent: "max"}, {amount: ${computePointsToUSD(10000)}, reason: "Output tokens"});
+hold({amount: 10000, reason: "Input tokens", intent: "max"}, {amount: 10000, reason: "Output tokens"});
 stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
-charge({amount: ${computePointsToUSD(2000)}, reason: "Input tokens"}, {amount: ${computePointsToUSD(2000)}, reason: "Output tokens"});
+charge({amount: 2000, reason: "Input tokens"}, {amount: 2000, reason: "Output tokens"});
                 `
             },
             tooExpensiveBot: {
@@ -133,7 +133,7 @@ charge({amount: ${computePointsToUSD(2000)}, reason: "Input tokens"}, {amount: $
                 threshold: 5000,
                 code: `// Too expensive bot
 loading(900);
-charge({amount: ${computePointsToUSD(200000)}, reason: "Input tokens", intent: "max"}, {amount: ${computePointsToUSD(200000)}, reason: "Output tokens"});
+charge({amount: 200000, reason: "Input tokens"}, {amount: 200000, reason: "Output tokens"});
 stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
 `
             }
@@ -285,14 +285,6 @@ if (hash) {
             `;
         }
 
-        function usdToComputePoints(usd) {
-            return Math.round(usd * 20000);
-        }
-
-        function computePointsToUSD(computePoints) {
-            return (computePoints / 20000).toFixed(2);
-        }
-
         function validateIntent(intent) {
             if (!intent) {
                 return;
@@ -314,16 +306,15 @@ if (hash) {
 
         function charge(...objs) {
             const unapprovedCharges = objs.map(obj => {
-                const compute_points = usdToComputePoints(obj.amount);
                 validateIntent(obj.intent);
-                return { ...obj, amount: compute_points };
+                return { ...obj };
             });
 
             checkThreshold("charge", unapprovedCharges, {
                 onProceed() {
                     for (let obj of unapprovedCharges) {
                         charges.push(obj);
-                        console.log(`Charge: ${obj.reason} ${obj.amount} compute points ($${computePointsToUSD(obj.amount)})`);
+                        console.log(`Charge: ${obj.reason} ${obj.amount} compute points`);
                     }
                 }
             });
@@ -331,15 +322,14 @@ if (hash) {
 
         function hold(...objs) {
             const unapprovedHolds = objs.map(obj => {
-                const compute_points = usdToComputePoints(obj.amount);
                 validateIntent(obj.intent);
-                return { ...obj, amount: compute_points };
+                return { ...obj };
             });
             checkThreshold("hold", unapprovedHolds, {
                 onProceed() {
                     for (let obj of unapprovedHolds) {
                         holds.push(obj);
-                        console.log(`Hold: ${obj.reason} ${obj.amount} compute points ($${computePointsToUSD(obj.amount)})`);
+                        console.log(`Hold: ${obj.reason} ${obj.amount} compute points`);
                     }
                 }
             });
