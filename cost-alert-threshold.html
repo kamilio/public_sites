@@ -102,12 +102,12 @@ charge({amount: 0.1, reason: "Image generation (flat)"});
                 threshold: 5000,
                 code: `// Bot keeps charging
 loading(900);
-charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message", intent: "ongoing"});
-charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message", intent: "ongoing"});
-charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message", intent: "ongoing"});
-charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message", intent: "ongoing"});
+charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message"});
+charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message"});
+charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message"});
+charge({amount: ${computePointsToUSD(2000)}, reason: "ChatGPT Message"});
 loading(900);
-charge({amount: ${computePointsToUSD(10000)}, reason: "GPT-4 Message", intent: "ongoing"});
+charge({amount: ${computePointsToUSD(10000)}, reason: "GPT-4 Message"});
 stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
 `
             },
@@ -194,13 +194,25 @@ if (hash) {
                     return `The message is going to cost <b>exactly ${amount}</b> compute points.`;
                 case 'max':
                     return `The message is going to cost <b>up to ${amount}</b> compute points.`;
-                case 'ongoing':
-                    return `The message will cost ${amount} compute points but the price <b>might increase</b> in the future.`;
                 default:
-                    return `${botName} will exceed your message point limit.`;
+                    return `The message will cost ${amount} compute points but the price <b>might increase</b> in the future.`;
             }
         }
 
+        function outofPointsModalTemplate({transactionTriggers, total_holds_only_approved, charges}) {
+            return `
+                <h3 class="font-bold text-lg mb-2">Out of points</h3>
+
+                <div id="triggeredHoldsSection" style="display: ${transactionTriggers.length > 0 ? 'block' : 'none'}">
+                    <strong class="mb-2">Rejected charges</strong>
+                    ${receiptTemplate(transactionTriggers, [])}
+                </div>
+                <div id="chargedItemsSection" style="display: ${charges.length > 0 ? 'block' : 'none'}" class="mt-2">
+                    <strong class="mb-2">Already charged</strong>
+                    ${receiptTemplate(charges, [])}
+                </div>
+            `;
+        }
 
         function alertModalTemplate({transactionTriggers, total_holds_only_approved, charges}) {
             const intentMessage = getIntentMessage(transactionTriggers, [...charges, ...transactionTriggers].reduce((sum, charge) => sum + charge.amount, 0));
@@ -395,6 +407,9 @@ if (hash) {
             const totalPoints = parseInt(document.getElementById(`totalPoints-${tabId}`).value);
             if (total_charges > totalPoints || total_holds > totalPoints) {
                 document.getElementById("output").innerHTML = `<pre class="text-error">Alert: Charges/holds exceed ${totalPoints} compute points!</pre>`;
+                document.getElementById("alertContent").innerHTML = outofPointsModalTemplate({transactionTriggers, total_holds_only_approved, charges});
+                document.getElementById("proceedBtn").classList.add("btn-disabled");
+                document.getElementById("alertModal").classList.add("modal-open");
                 alertShown = { transactionType, transactionTriggers, onProceed, onCancel };
                 return
             }
@@ -413,6 +428,7 @@ if (hash) {
                 transactionTriggers = transactionTriggers.map(trigger => ({ ...trigger, transactionType }));
                 document.getElementById("alertContent").innerHTML = alertModalTemplate({transactionTriggers, total_holds_only_approved, charges});
                 document.getElementById("alertModal").classList.add("modal-open");
+                document.getElementById("proceedBtn").classList.remove("btn-disabled");
                 alertShown = { transactionType, transactionTriggers, onProceed, onCancel };
             } else {
                 onProceed?.();
@@ -474,6 +490,7 @@ if (hash) {
         document.getElementById("proceedBtn").addEventListener("click", () => {
             const tabId = document.querySelector(".tab-active").getAttribute("data-tab-id");
             document.getElementById("alertModal").classList.remove("modal-open");
+            document.getElementById("proceedBtn").classList.remove("btn-disabled");
             const { onProceed } = alertShown;
 
             onProceed?.();
