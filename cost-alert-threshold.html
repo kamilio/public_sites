@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html data-theme="light">
+
+<head>
+    <title>UI Interaction Prototype</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@2.51.6/dist/full.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .grid-cols-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="grid grid-cols-3 gap-4 p-4 min-h-screen">
+        <div>
+            <div id="tabs" class="tabs"></div>
+            <div id="tabContent" class="tab-content"></div>
+            <div class="mt-8">
+                <h2 class="text-xl font-bold mb-4">API Documentation</h2>
+                <ul class="list-disc pl-6 pr-4">
+                    <li>
+                        <code>charge(...objs: {amount: number, reason: string}[])</code>: Records charges with specified
+                        amounts in USD and reasons. The amounts are converted to compute points (20 USD = 1 million
+                        compute points).
+                        <pre class="mt-2 ml-4">charge(
+            {amount: 0.05, reason: "API call"},
+            {amount: 0.1, reason: "Database query"}
+            ); // 1000 compute points, 2000 compute points</pre>
+                    </li>
+                    <li class="mt-4">
+                        <code>hold(...objs: {amount: number, reason: string}[])</code>: Records holds with specified
+                        amounts in USD and reasons. The amounts are converted to compute points (20 USD = 1 million
+                        compute points).
+                        <pre class="mt-2 ml-4">hold(
+            {amount: 1, reason: "Image generation"},
+            {amount: 0.5, reason: "Text generation"}
+            ); // 20000 compute points, 10000 compute points</pre>
+                    </li>
+                    <li class="mt-4">
+                        <code>stream(text: string, length: number)</code>: Streams the provided text to the output,
+                        displaying it word by word until the specified length is reached.
+                        <pre class="mt-2 ml-4">stream(
+            "Hello world! This is a streaming output example.",
+            30
+            ); // Streams the text up to 30 characters</pre>
+                    </li>
+                    <li class="mt-4">
+                        <code>loading(ms: number)</code>: Simulates a loading state by blocking execution for the
+                        specified number of milliseconds.
+                        <pre class="mt-2 ml-4">loading(2000); // Blocks execution for 2 seconds</pre>
+                    </li>
+                    <li class="mt-4"> <code>image(url: string)</code>: Displays an image from the provided URL in the
+                        output area.
+                        <pre
+                            class="mt-2 ml-4">image( "https://pfst.cf2.poecdn.net/base/image/83bdbab456ef93ceec5196e233f3fb8a921b9ee3915b1a4994c90b0b78506775?w=1024&h=1024&pmaid=87206985" ); // Displays the image from the specified URL</pre>
+                    </li>
+                    <li class="mt-4"> <code>clear()</code>: Clears the content of the output area.
+                        <pre class="mt-2 ml-4">clear(); // Clears the output area</pre>
+                    </li>
+                    <li class="mt-4"> <code>print(text: string)</code>: Prints the provided text to the output area.
+                        <pre class="mt-2 ml-4">print( "Hello, World!" ); // Prints the text to the output area</pre>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div>
+            <div id="output" class="mockup-code w-full h-full overflow-auto break-words p-4"></div>
+        </div>
+        <div>
+            <div id="receipt" class=" w-full h-full overflow-auto break-words p-4"></div>
+        </div>
+
+
+    </div>
+
+
+
+    <!-- Alert Modal -->
+    <div id="alertModal" class="modal">
+        <div class="modal-box">
+            <div id="alertContent" class="py-4"></div>
+            <div class="modal-action">
+                <button id="proceedBtn" class="btn btn-primary">Continue with new limit</button>
+                <button id="cancelBtn" class="btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        const tabsConfig = {
+            playground: {
+                label: "System bot",
+                totalPoints: 20000,
+                threshold: 5000,
+                code: `// System Bot
+loading(900);
+hold({amount: 0.1, reason: "Input tokens"}, {amount: 0.05, reason: "Output tokens"}, {amount: 0.3, reason: "Chat history"});
+stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
+charge({amount: 0.1, reason: "Input tokens"}, {amount: 0.05, reason: "Output tokens"}, {amount: 0.3, reason: "Chat history"});
+`
+            },
+
+            imageBot: {
+                label: "Image gen bot",
+                totalPoints: 20000,
+                threshold: 5000,
+                code: `// Image gen bot
+loading(900);
+hold({amount: 0.1, reason: "Image generation (flat)"});
+image("https:\/\/pfst.cf2.poecdn.net/base/image/83bdbab456ef93ceec5196e233f3fb8a921b9ee3915b1a4994c90b0b78506775?w=1024&h=1024&pmaid=87206985");
+charge({amount: 0.1, reason: "Image generation (flat)"});
+`
+            }
+        };
+
+        function renderTabs() {
+            const tabsElement = document.getElementById("tabs");
+            const tabContentElement = document.getElementById("tabContent");
+
+            tabsElement.innerHTML = "";
+            tabContentElement.innerHTML = "";
+
+            for (const [tabId, tabConfig] of Object.entries(tabsConfig)) {
+                const tabElement = document.createElement("a");
+                tabElement.className = "tab tab-lifted";
+                tabElement.textContent = tabConfig.label;
+                tabElement.setAttribute("data-tab-id", tabId);
+                tabElement.addEventListener("click", () => {
+                    document.querySelector(".tab-active")?.classList.remove("tab-active");
+                    tabElement.classList.add("tab-active");
+                    renderTabContent(tabId);
+                });
+                tabsElement.appendChild(tabElement);
+            }
+
+            // Activate the first tab by default
+            tabsElement.firstChild.classList.add("tab-active");
+            renderTabContent(Object.keys(tabsConfig)[0]);
+        }
+
+        function renderTabContent(tabId) {
+            const tabConfig = tabsConfig[tabId];
+            const tabContentElement = document.getElementById("tabContent");
+
+            tabContentElement.innerHTML = `
+                <div id="playground" class="p-4">
+                    <label for="totalPoints-${tabId}" class="label">Total Points</label>
+                    <input id="totalPoints-${tabId}" type="number" value="${tabConfig.totalPoints}" placeholder="Enter total points"
+                        class="input input-bordered w-full max-w-xs mb-4" />
+                    <label for="threshold-${tabId}" class="label">Cost Alert Threshold (Compute Points)</label>
+                    <input id="threshold-${tabId}" type="number" value="${tabConfig.threshold}" placeholder="Enter threshold"
+                        class="input input-bordered w-full max-w-xs mb-4" />
+                    <textarea id="code-${tabId}" class="textarea textarea-bordered w-full h-64" placeholder="Enter JavaScript code">${tabConfig.code}</textarea>
+                    <button id="run-${tabId}" class="btn btn-primary mt-4">Run</button>
+                </div>
+            `;
+
+            document.getElementById(`run-${tabId}`).addEventListener("click", () => {
+                runCode(tabId);
+            });
+        }
+
+
+        function alertModalTemplate(triggeredHolds, currentHold, chargedItems) {
+            const botName = getActiveBotLabel();
+            return `
+                <h3 class="font-bold text-lg mb-2">${botName} will exceed your message point limit</h3>
+                <div id="triggeredHoldsSection" style="display: ${triggeredHolds.length > 0 ? 'block' : 'none'}">
+                    <strong>Threshold Triggered By:</strong>
+                    <ul id="triggeredHolds" class="list-disc pl-6">
+                        ${triggeredHolds.map(hold => `<li>${hold.transactionType === "charge" ? "Charge: " : "Hold: "}${hold.reason}: ${hold.amount} compute points (${computePointsToUSD(hold.amount)})</li>`).join('')}
+                    </ul>
+                </div>
+                <div id="currentHoldSection" style="display: ${currentHold > 0 ? 'block' : 'none'}" class="mt-4">
+                    <strong>Current Hold:</strong> <span id="currentHold">${currentHold} compute points (${computePointsToUSD(currentHold)})</span>
+                </div>
+                <div id="chargedItemsSection" style="display: ${chargedItems.length > 0 ? 'block' : 'none'}" class="mt-2">
+                    <strong>Already Charged Items:</strong>
+                    <ul id="chargedItems" class="list-disc pl-6">
+                        ${chargedItems.map(charge => `<li>${charge.reason}: ${charge.amount} compute points (${computePointsToUSD(charge.amount)})</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+        }
+
+        function receiptTemplate(charges, holds) {
+            return `
+                <div class="overflow-x-auto">
+                    <table class="table table-compact w-full">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Description</th>
+                                <th>Compute Points</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${charges.map((charge, index) => `
+                                <tr>
+                                    <th>${index + 1}</th>
+                                    <td>${charge.reason}</td>
+                                    <td>${charge.amount}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th></th>
+                                <th>Total Charges:</th>
+                                <th>${charges.reduce((sum, charge) => sum + charge.amount, 0)}</th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            `;
+        }
+
+        function usdToComputePoints(usd) {
+            return Math.round(usd * 20000);
+        }
+
+        function computePointsToUSD(computePoints) {
+            return (computePoints / 20000).toFixed(2);
+        }
+
+        let total_compute_points = 0;
+        let charges = [];
+        let holds = [];
+        let alertShown = null;
+        let currentLine = 0;
+        let lines = [];
+        let originalThreshold = 0;
+
+        function charge(...objs) {
+            const unapprovedCharges = objs.map(obj => {
+                const compute_points = usdToComputePoints(obj.amount);
+                return { reason: obj.reason, amount: compute_points };
+            });
+
+            checkThreshold("charge", unapprovedCharges, {
+                onProceed() {
+                    for (let obj of unapprovedCharges) {
+                        charges.push(obj);
+                        console.log(`Charge: ${obj.reason} ${obj.amount} compute points ($${computePointsToUSD(obj.amount)})`);
+                    }
+                }
+            });
+        }
+
+        function hold(...objs) {
+            const unapprovedHolds = objs.map(obj => {
+                const compute_points = usdToComputePoints(obj.amount);
+                return { reason: obj.reason, amount: compute_points };
+            });
+            checkThreshold("hold", unapprovedHolds, {
+                onProceed() {
+                    for (let obj of unapprovedHolds) {
+                        holds.push(obj);
+                        console.log(`Hold: ${obj.reason} ${obj.amount} compute points ($${computePointsToUSD(obj.amount)})`);
+                    }
+                }
+            });
+        }
+
+        async function loading(ms) {
+            let start = Date.now();
+            let loadingText = "Loading";
+            let loadingInterval = setInterval(() => {
+                loadingText += ".";
+                if (loadingText.length > 10) {
+                    loadingText = "Loading";
+                }
+                document.getElementById("output").innerHTML = `<pre>${loadingText}</pre>`;
+            }, 300);
+            await sleep(700);
+            clearInterval(loadingInterval);
+            loadingText = "Still loading";
+            loadingInterval = setInterval(() => {
+                loadingText += ".";
+                if (loadingText.length > 15) {
+                    loadingText = "Still loading";
+                }
+                document.getElementById("output").innerHTML = `<pre>${loadingText}</pre>`;
+            }, 300);
+            while (Date.now() - start < ms) {
+                await sleep(100); // Check for alert every 100ms
+                if (alertShown) {
+                    clearInterval(loadingInterval);
+                    throw new Error("Execution stopped.");
+                }
+            }
+            clearInterval(loadingInterval);
+        }
+
+        async function stream(text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.", length = 100) {
+            let words = text.split(" ");
+            let output = "";
+            for (let word of words) {
+                if (output.length + word.length + 1 <= length) {
+                    output += word + " ";
+                    document.getElementById("output").innerHTML = `<pre>${output}</pre>`;
+                    await sleep(100); // Delay between each word
+                    if (alertShown) {
+                        throw new Error("Execution stopped.");
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+
+        async function image(url = "https://pfst.cf2.poecdn.net/base/image/83bdbab456ef93ceec5196e233f3fb8a921b9ee3915b1a4994c90b0b78506775?w=1024&h=1024&pmaid=87206985") {
+            document.getElementById("output").innerHTML = `<img src="${url}" class="w-full h-auto" />`;
+        }
+
+        async function clear() {
+            document.getElementById("output").innerHTML = "";
+        }
+
+        async function print(text) {
+            document.getElementById("output").innerHTML = `<pre>${text}</pre>`;
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function checkThreshold(transactionType, transactionTriggers = [], { onProceed = null, onCancel = null }) {
+            const tabId = document.querySelector(".tab-active").getAttribute("data-tab-id");
+            const threshold = document.getElementById(`threshold-${tabId}`).value;
+            const chargesWithUnapproved = transactionType === "charge" ? [...charges, ...transactionTriggers] : charges;
+            const total_charges = chargesWithUnapproved.reduce((sum, charge) => sum + charge.amount, 0);
+
+            const holdsWithUnapproved = transactionType === "hold" ? [...holds, ...transactionTriggers] : holds;
+            let total_holds = holdsWithUnapproved.reduce((sum, hold) => sum + hold.amount, 0);
+            let total_holds_only_approved = holds.reduce((sum, hold) => sum + hold.amount, 0);
+
+            if ((transactionType === "charge" && total_charges > total_holds && total_charges > threshold && !alertShown) ||
+                (transactionType === "hold" && total_holds > threshold && !alertShown)) {
+
+                transactionTriggers = transactionTriggers.map(trigger => ({ ...trigger, transactionType }));
+                document.getElementById("alertContent").innerHTML = alertModalTemplate(transactionTriggers, total_holds_only_approved, charges);
+                document.getElementById("alertModal").classList.add("modal-open");
+                alertShown = { transactionType, transactionTriggers, onProceed, onCancel };
+            } else {
+                onProceed?.();
+            }
+        }
+
+        function getActiveBotLabel() {
+            return document.querySelector(".tab-active").textContent;
+        }
+
+        async function executeCode(tabId) {
+            for (currentLine; currentLine < lines.length; currentLine++) {
+                const totalPoints = parseInt(document.getElementById(`totalPoints-${tabId}`).value);
+                if (charges.reduce((sum, charge) => sum + charge.amount, 0) > totalPoints || holds.reduce((sum, hold) => sum + hold.amount, 0) > totalPoints) {
+                    document.getElementById("output").innerHTML = `<pre class="text-error">Alert: Charges/holds exceed ${totalPoints} compute points ($${computePointsToUSD(totalPoints)})!</pre>`;
+                    break
+                }
+
+                let line = lines[currentLine].trim();
+                if (line.startsWith("charge(")) {
+                    await eval(line);
+                } else if (line.startsWith("hold(")) {
+                    await eval(line);
+                } else if (line.startsWith("stream(")) {
+                    await eval(line);
+                } else if (line.startsWith("loading(")) {
+                    await eval(line);
+                } else if (line.startsWith("print(")) {
+                    await eval(line);
+                } else if (line.startsWith("image(")) {
+                    await eval(line);
+                } else if (line.startsWith("clear()")) {
+                    await eval(line);
+                } else {
+                    continue;
+                }
+                if (alertShown) {
+                    currentLine++;
+                    break;
+                }
+            }
+
+            document.getElementById(`run-${tabId}`).disabled = false;
+            document.getElementById("receipt").innerHTML = receiptTemplate(charges, holds);
+        }
+
+        function runCode(tabId) {
+            let code = document.getElementById(`code-${tabId}`).value;
+            lines = code.split("\n");
+            document.getElementById("output").innerHTML = "";
+            total_compute_points = 0;
+            charges = [];
+            holds = [];
+            alertShown = null;
+            currentLine = 0;
+            console.clear();
+
+            originalThreshold = parseInt(document.getElementById(`threshold-${tabId}`).value);
+
+            document.getElementById(`run-${tabId}`).disabled = true;
+            executeCode(tabId);
+        }
+
+        document.getElementById("proceedBtn").addEventListener("click", () => {
+            const tabId = document.querySelector(".tab-active").getAttribute("data-tab-id");
+            document.getElementById("alertModal").classList.remove("modal-open");
+            const { onProceed } = alertShown;
+
+            onProceed?.();
+
+            alertShown = null;
+
+            // Increase the alert threshold to the next multiple of the original value
+            let currentThreshold = parseInt(document.getElementById(`threshold-${tabId}`).value);
+            let newThreshold = Math.ceil(currentThreshold / originalThreshold) * originalThreshold;
+            document.getElementById(`threshold-${tabId}`).value = newThreshold;
+
+            executeCode(tabId);
+        });
+
+        document.getElementById("cancelBtn").addEventListener("click", () => {
+            const tabId = document.querySelector(".tab-active").getAttribute("data-tab-id");
+            const { onCancel } = alertShown;
+
+            onCancel?.();
+
+            document.getElementById("alertModal").classList.remove("modal-open");
+            let total_charges = charges.reduce((sum, charge) => sum + charge.amount, 0);
+            document.getElementById("output").innerHTML += `<pre class="text-error">Execution stopped due to threshold exceeded. Total charges incurred: ${total_charges} compute points ($${computePointsToUSD(total_charges)}).</pre>`;
+            document.getElementById(`run-${tabId}`).disabled = false;
+        });
+
+        renderTabs();
+    </script>
+</body>
+
+</html>
