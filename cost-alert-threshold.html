@@ -110,6 +110,17 @@ loading(900);
 charge({amount: ${computePointsToUSD(10000)}, reason: "GPT-4 Message", intent: "ongoing"});
 stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
 `
+            },
+            generousEstimate: {
+                label: "Generous estimate bot",
+                totalPoints: 20000,
+                threshold: 5000,
+                code: `// Generous estimate
+loading(900);
+hold({amount: ${computePointsToUSD(10000)}, reason: "Input tokens", intent: "max"}, {amount: ${computePointsToUSD(10000)}, reason: "Output tokens"});
+stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
+charge({amount: ${computePointsToUSD(10000)}, reason: "Input tokens"}, {amount: ${computePointsToUSD(10000)}, reason: "Output tokens"});
+                `
             }
         };
 
@@ -180,11 +191,11 @@ if (hash) {
 
             switch (intent) {
                 case 'exact':
-                    return `The message is going to cost exactly ${amount} compute points.`;
+                    return `The message is going to cost <b>exactly ${amount}</b> compute points.`;
                 case 'max':
-                    return `The message is going to cost up to ${amount} compute points.`;
+                    return `The message is going to cost <b>up to ${amount}</b> compute points.`;
                 case 'ongoing':
-                    return `The message will cost ${amount} compute points but the price might increase in the future.`;
+                    return `The message will cost ${amount} compute points but the price <b>might increase</b> in the future.`;
                 default:
                     return `${botName} will exceed your message point limit.`;
             }
