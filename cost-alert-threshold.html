@@ -24,6 +24,11 @@
             <div id="tabContent" class="tab-content"></div>
             <div class="mt-8">
                 <h2 class="text-xl font-bold mb-4">API Documentation</h2>
+                The script splits the code by lines. Each line is evaluated one by one. Don't use multi line statements.<br><br>
+
+                <h3 class="text-lg font-bold mb-2">Functions</h3>
+
+
                 <ul class="list-disc pl-6 pr-4">
                     <li>
                         <code>charge(...objs: {amount: number, reason: string}[], intent: "exact" | "ongoing")</code>
@@ -121,6 +126,16 @@ hold({amount: ${computePointsToUSD(10000)}, reason: "Input tokens", intent: "max
 stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
 charge({amount: ${computePointsToUSD(2000)}, reason: "Input tokens"}, {amount: ${computePointsToUSD(2000)}, reason: "Output tokens"});
                 `
+            },
+            tooExpensiveBot: {
+                label: "Too expensive bot",
+                totalPoints: 20000,
+                threshold: 5000,
+                code: `// Too expensive bot
+loading(900);
+charge({amount: ${computePointsToUSD(200000)}, reason: "Input tokens", intent: "max"}, {amount: ${computePointsToUSD(200000)}, reason: "Output tokens"});
+stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
+`
             }
         };
 
