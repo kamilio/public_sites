@@ -513,12 +513,11 @@ if (hash) {
             const tabId = document.querySelector(".tab-active").getAttribute("data-tab-id");
             const { onCancel } = alertShown;
 
-            onCancel?.();
-
             document.getElementById("alertModal").classList.remove("modal-open");
             let total_charges = charges.reduce((sum, charge) => sum + charge.amount, 0);
-            document.getElementById("output").innerHTML = `<pre class="text-error">Execution stopped due to threshold exceeded. <br><br>Total charges incurred: ${total_charges} compute points.</pre>`;
             document.getElementById(`run-${tabId}`).disabled = false;
+
+            onCancel?.();
         });
 
         renderTabs();
