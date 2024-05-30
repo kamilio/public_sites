@@ -14,6 +14,20 @@
             white-space: pre-wrap;
             word-wrap: break-word;
         }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+
+        .accordion-item input:checked~.accordion-content {
+            max-height: 1000px;
+        }
+
+        .accordion-item input:checked~.accordion-title svg {
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 
@@ -24,17 +38,18 @@
             <div id="tabContent" class="tab-content"></div>
             <div class="mt-8">
                 <h2 class="text-xl font-bold mb-4">API Documentation</h2>
-                The script splits the code by lines. Each line is evaluated one by one. Don't use multi line statements.<br><br>
+                The script splits the code by lines. Each line is evaluated one by one. Don't use multi line
+                statements.<br><br>
 
                 <h3 class="text-lg font-bold mb-2">Functions</h3>
 
 
                 <ul class="list-disc pl-6 pr-4">
                     <li>
-                        <code>charge(...objs: {amount: number, reason: string}[], intent: "exact" | "ongoing")</code>
+                        <code>charge(...objs: {amount: number, reason: string}[], intent: "fixed_price" | "flexible" = "flexible")</code>
                     </li>
                     <li class="mt-4">
-                        <code>hold(...objs: {amount: number, reason: string}[], intent: "exact" | "max" | "ongoing")</code>
+                        <code>hold(...objs: {amount: number, reason: string}[], intent: "fixed_price" | "upper_limit" | "flexible" = "flexible")</code>
                     </li>
                     <li class="mt-4">
                         <code>stream(text: string, length: number)</code>
@@ -77,14 +92,14 @@
     <script>
 
         const tabsConfig = {
-            playground: {
+            systemBot: {
                 label: "System bot",
                 totalPoints: 20000,
                 threshold: 5000,
                 code: `// System Bot
 loading(900);
-hold({amount: 1000, reason: "Input tokens", intent: "exact"}, {amount: 2000, reason: "Output tokens"}, {amount: 2200, reason: "Chat history"});
-stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
+hold({amount: 1000, reason: "Input tokens", intent: "fixed_price"}, {amount: 2000, reason: "Output tokens"}, {amount: 2200, reason: "Chat history"});
+stream();
 charge({amount: 1000, reason: "Input tokens"}, {amount: 2000, reason: "Output tokens"}, {amount: 2200, reason: "Chat history"});
 `
             },
@@ -95,8 +110,8 @@ charge({amount: 1000, reason: "Input tokens"}, {amount: 2000, reason: "Output to
                 threshold: 5000,
                 code: `// Image gen bot
 loading(900);
-hold({amount: 1000, reason: "Image generation (flat)", intent: "exact"});
-image("https:\/\/pfst.cf2.poecdn.net/base/image/83bdbab456ef93ceec5196e233f3fb8a921b9ee3915b1a4994c90b0b78506775?w=1024&h=1024&pmaid=87206985");
+hold({amount: 1000, reason: "Image generation (flat)", intent: "fixed_price"});
+image();
 charge({amount: 1000, reason: "Image generation (flat)"});
 `
             },
@@ -113,7 +128,7 @@ charge({amount: 2000, reason: "ChatGPT Message"});
 charge({amount: 2000, reason: "ChatGPT Message"});
 loading(900);
 charge({amount: 10000, reason: "GPT-4 Message"});
-stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
+stream();
 `
             },
             generousEstimate: {
@@ -122,8 +137,8 @@ stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nu
                 threshold: 5000,
                 code: `// Generous estimate
 loading(900);
-hold({amount: 10000, reason: "Input tokens", intent: "max"}, {amount: 10000, reason: "Output tokens"});
-stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
+hold({amount: 10000, reason: "Input tokens", intent: "upper_limit"}, {amount: 10000, reason: "Output tokens"});
+stream();
 charge({amount: 2000, reason: "Input tokens"}, {amount: 2000, reason: "Output tokens"});
                 `
             },
@@ -134,9 +149,10 @@ charge({amount: 2000, reason: "Input tokens"}, {amount: 2000, reason: "Output to
                 code: `// Too expensive bot
 loading(900);
 charge({amount: 200000, reason: "Input tokens"}, {amount: 200000, reason: "Output tokens"});
-stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", 200);
+stream();
 `
-            }
+            },
+
         };
 
         function renderTabs() {
@@ -168,11 +184,15 @@ stream("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nu
 
         function openTabFromUrl() {
             // Activate tab based on URL hash
-const hash = window.location.hash;
-if (hash) {
-  const tabId = hash.slice(1); // remove #
-  document.querySelector(`[data-tab-id="${tabId}"]`)?.click(); 
-}
+            const hash = window.location.hash;
+            if (hash) {
+                const tabId = hash.slice(1); // remove #
+                document.querySelector(`[data-tab-id="${tabId}"]`)?.click();
+            }
+        }
+
+        function getTabId() {
+            return document.querySelector(".tab-active").getAttribute("data-tab-id");
         }
 
         function renderTabContent(tabId) {
@@ -205,16 +225,16 @@ if (hash) {
             const { intent } = firstTriggeredHold;
 
             switch (intent) {
-                case 'exact':
+                case 'fixed_price':
                     return `The message is going to cost <b>exactly ${amount}</b> compute points.`;
-                case 'max':
+                case 'upper_limit':
                     return `The message is going to cost <b>up to ${amount}</b> compute points.`;
                 default:
                     return `The message will cost ${amount} compute points but the price <b>might increase</b> in the future.`;
             }
         }
 
-        function outofPointsModalTemplate({transactionTriggers, total_holds_only_approved, charges}) {
+        function outofPointsModalTemplate({ transactionTriggers, total_holds_only_approved, charges }) {
             return `
                 <h3 class="font-bold text-lg mb-2">Out of points</h3>
 
@@ -229,27 +249,56 @@ if (hash) {
             `;
         }
 
-        function alertModalTemplate({transactionTriggers, total_holds_only_approved, charges}) {
+        function accordionTemplate({ title, price, content }) {
+            return `<div class="container mx-auto my-8">
+    <div class="accordion">
+      <div class="accordion-item">
+        <input type="checkbox" id="accordion-1" class="hidden">
+        <label for="accordion-1" class="accordion-title flex justify-between items-center w-full p-4 bg-gray-100 hover:bg-gray-200 cursor-pointer">
+          <div class="inline-block flex items-center""><span>${title}</span><svg class="w-8 h-8 transition-transform transform" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M6.293 6.293a1 1 0 011.414 0L10 8.586l2.293-2.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg></div>
+          <span>${price}</span>
+        </label>
+        <div class="accordion-content">
+          <div class="p-4">
+            ${content}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+        }
+
+        function alertModalTemplate({ transactionTriggers, total_holds_only_approved, charges }) {
+            const tabId = getTabId()
             const intentMessage = getIntentMessage(transactionTriggers, [...charges, ...transactionTriggers].reduce((sum, charge) => sum + charge.amount, 0));
 
             return `
-                <h3 class="font-bold text-lg mb-2">${intentMessage}</h3>
-
+                <h3 class="font-bold text-xl mb-2">${getActiveBotLabel()} is requesting more than your message point limit</h3>
+                ${accordionTemplate({ content: `<div id="chargedItemsSection" style="display: ${charges.length > 0 ? 'block' : 'none'}" class="mt-2">
+                    <div class="mb-2"><strong class="mb-2">Previous charges</strong></div>
+                    ${receiptTemplate(charges, [])}
+                </div>
+                
                 <div id="triggeredHoldsSection" style="display: ${transactionTriggers.length > 0 ? 'block' : 'none'}">
-                    <strong class="mb-2">Upcoming charges</strong>
+                    <div class="mb-2 mt-4"><strong>Pending charges</strong></div>
                     ${receiptTemplate(transactionTriggers, [])}
                 </div>
                 <div id="currentHoldSection" style="display: ${total_holds_only_approved > 0 ? 'block' : 'none'}" class="mt-4">
                     <strong>Current Hold:</strong> <span id="currentHold">${total_holds_only_approved} compute points</span>
                 </div>
-                <div id="chargedItemsSection" style="display: ${charges.length > 0 ? 'block' : 'none'}" class="mt-2">
-                    <strong class="mb-2">Already charged</strong>
-                    ${receiptTemplate(charges, [])}
-                </div>
+              
 
+                `, title: `Message cost`, price: [...charges, ...transactionTriggers].reduce((sum, hold) => sum + hold.amount, 0)} )}
                 <div class="mt-8">
                     <strong>Set new message point limit ${newThreshold}</strong>
+                    
+                    <p class="text-sm mt-2">Remaining monthly points: ${document.getElementById(`totalPoints-${tabId}`).value}</p>
                 </div>
+
+
+                
             `;
         }
 
@@ -285,12 +334,14 @@ if (hash) {
             `;
         }
 
+
+
         function validateIntent(intent) {
             if (!intent) {
                 return;
             }
 
-            if (!["exact", "max", "ongoing"].includes(intent)) {
+            if (!["fixed_price", "upper_limit", "flexible"].includes(intent)) {
                 throw new Error("Invalid intent");
             }
         }
@@ -314,7 +365,6 @@ if (hash) {
                 onProceed() {
                     for (let obj of unapprovedCharges) {
                         charges.push(obj);
-                        console.log(`Charge: ${obj.reason} ${obj.amount} compute points`);
                     }
                 }
             });
@@ -329,7 +379,6 @@ if (hash) {
                 onProceed() {
                     for (let obj of unapprovedHolds) {
                         holds.push(obj);
-                        console.log(`Hold: ${obj.reason} ${obj.amount} compute points`);
                     }
                 }
             });
@@ -365,7 +414,7 @@ if (hash) {
             clearInterval(loadingInterval);
         }
 
-        async function stream(text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.", length = 100) {
+        async function stream(text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl. Sed euismod, nulla sit amet aliquam lacinia, nisl nisl aliquam nisl, nec aliquam nisl nisl sit amet nisl.", length = 200) {
             let words = text.split(" ");
             let output = "";
             for (let word of words) {
@@ -399,7 +448,7 @@ if (hash) {
         }
 
         function checkThreshold(transactionType, transactionTriggers = [], { onProceed = null, onCancel = null }) {
-            const tabId = document.querySelector(".tab-active").getAttribute("data-tab-id");
+            const tabId = getTabId();
 
             const chargesWithUnapproved = transactionType === "charge" ? [...charges, ...transactionTriggers] : charges;
             const total_charges = chargesWithUnapproved.reduce((sum, charge) => sum + charge.amount, 0);
@@ -411,8 +460,8 @@ if (hash) {
             // total limit
             const totalPoints = parseInt(document.getElementById(`totalPoints-${tabId}`).value);
             if (total_charges > totalPoints || total_holds > totalPoints) {
-                document.getElementById("output").innerHTML = `<pre class="text-error">Alert: Charges/holds exceed ${totalPoints} compute points!</pre>`;
-                document.getElementById("alertContent").innerHTML = outofPointsModalTemplate({transactionTriggers, total_holds_only_approved, charges});
+                document.getElementById("output").innerHTML = ``;
+                document.getElementById("alertContent").innerHTML = outofPointsModalTemplate({ transactionTriggers, total_holds_only_approved, charges });
                 document.getElementById("proceedBtn").classList.add("btn-disabled");
                 document.getElementById("alertModal").classList.add("modal-open");
                 alertShown = { transactionType, transactionTriggers, onProceed, onCancel };
@@ -420,18 +469,17 @@ if (hash) {
             }
 
 
-            
+
             const threshold = document.getElementById(`threshold-${tabId}`).value;
 
 
             if ((transactionType === "charge" && total_charges > total_holds && total_charges > threshold && !alertShown) ||
                 (transactionType === "hold" && total_holds > threshold && !alertShown)) {
 
-                console.log({originalThreshold, total_holds, total_charges, threshold})
                 newThreshold = Math.max(parseInt(threshold) + parseInt(originalThreshold), total_holds, total_charges);
 
                 transactionTriggers = transactionTriggers.map(trigger => ({ ...trigger, transactionType }));
-                document.getElementById("alertContent").innerHTML = alertModalTemplate({transactionTriggers, total_holds_only_approved, charges});
+                document.getElementById("alertContent").innerHTML = alertModalTemplate({ transactionTriggers, total_holds_only_approved, charges });
                 document.getElementById("alertModal").classList.add("modal-open");
                 document.getElementById("proceedBtn").classList.remove("btn-disabled");
                 alertShown = { transactionType, transactionTriggers, onProceed, onCancel };
@@ -470,8 +518,12 @@ if (hash) {
                 }
             }
 
-            document.getElementById(`run-${tabId}`).disabled = false;
-            document.getElementById("receipt").innerHTML = receiptTemplate(charges, holds);
+            try {
+                document.getElementById(`run-${tabId}`).disabled = false;
+                document.getElementById("receipt").innerHTML = receiptTemplate(charges, holds);
+            } catch (e) {
+                // do nothing yolo
+            }
         }
 
         function runCode(tabId) {
@@ -483,7 +535,6 @@ if (hash) {
             holds = [];
             alertShown = null;
             currentLine = 0;
-            console.clear();
 
             originalThreshold = parseInt(document.getElementById(`threshold-${tabId}`).value);
             newThreshold = null;
@@ -493,7 +544,7 @@ if (hash) {
         }
 
         document.getElementById("proceedBtn").addEventListener("click", () => {
-            const tabId = document.querySelector(".tab-active").getAttribute("data-tab-id");
+            const tabId = getTabId()
             document.getElementById("alertModal").classList.remove("modal-open");
             document.getElementById("proceedBtn").classList.remove("btn-disabled");
             const { onProceed } = alertShown;
@@ -503,14 +554,14 @@ if (hash) {
             alertShown = null;
 
             // Increase the alert threshold to the next multiple of the original value
-            
+
             document.getElementById(`threshold-${tabId}`).value = newThreshold;
 
             executeCode(tabId);
         });
 
         document.getElementById("cancelBtn").addEventListener("click", () => {
-            const tabId = document.querySelector(".tab-active").getAttribute("data-tab-id");
+            const tabId = getTabId()
             const { onCancel } = alertShown;
 
             document.getElementById("alertModal").classList.remove("modal-open");
