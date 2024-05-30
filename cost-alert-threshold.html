@@ -220,17 +220,15 @@ stream();
         function getIntentMessage(triggeredHolds, amount) {
             const botName = getActiveBotLabel();
             const firstTriggeredHold = triggeredHolds[0];
-            const sum = triggeredHolds.reduce((sum, hold) => sum + hold.amount, 0);
-
             const { intent } = firstTriggeredHold;
 
             switch (intent) {
                 case 'fixed_price':
-                    return `The message is going to cost <b>exactly ${amount}</b> compute points.`;
+                    return `${amount}`;
                 case 'upper_limit':
-                    return `The message is going to cost <b>up to ${amount}</b> compute points.`;
+                    return `Up to ${amount}`;
                 default:
-                    return `The message will cost ${amount} compute points but the price <b>might increase</b> in the future.`;
+                    return `${amount}+`;
             }
         }
 
@@ -290,7 +288,7 @@ stream();
                 </div>
               
 
-                `, title: `Message cost`, price: [...charges, ...transactionTriggers].reduce((sum, hold) => sum + hold.amount, 0)} )}
+                `, title: `Message cost`, price: intentMessage} )}
                 <div class="mt-8">
                     <strong>Set new message point limit ${newThreshold}</strong>
                     
@@ -520,7 +518,7 @@ stream();
 
             try {
                 document.getElementById(`run-${tabId}`).disabled = false;
-                document.getElementById("receipt").innerHTML = receiptTemplate(charges, holds);
+                document.getElementById("receipt").innerHTML = `<h2 class="text-xl font-bold mb-4">Receipt</h2>${receiptTemplate(charges, holds)}`;
             } catch (e) {
                 // do nothing yolo
             }
@@ -560,13 +558,14 @@ stream();
             executeCode(tabId);
         });
 
-        document.getElementById("cancelBtn").addEventListener("click", () => {
+        document.getElementById("cancelBtn").addEventListener("click", (e) => {
+            console.log("Cancelled");
             const tabId = getTabId()
             const { onCancel } = alertShown;
 
             document.getElementById("alertModal").classList.remove("modal-open");
-            let total_charges = charges.reduce((sum, charge) => sum + charge.amount, 0);
             document.getElementById(`run-${tabId}`).disabled = false;
+            document.getElementById("output").innerHTML = `<pre class="text-error">Cancelled</pre>`;
 
             onCancel?.();
         });
