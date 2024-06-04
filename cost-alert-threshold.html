@@ -46,6 +46,9 @@
 
                 <ul class="list-disc pl-6 pr-4">
                     <li>
+                        <code>dependency(botName: string, billingLabel: string)</code>
+                    </li>
+                    <li class="mt-4">
                         <code>charge(...objs: {amount: number, reason: string}[], intent: "fixed_price" | "flexible" = "flexible")</code>
                     </li>
                     <li class="mt-4">
@@ -92,11 +95,11 @@
     <script>
 
         const tabsConfig = {
-            systemBot: {
-                label: "System bot",
+            ChatGPT: {
+                label: "ChatGPT",
                 totalPoints: 20000,
                 threshold: 5000,
-                code: `// System Bot
+                code: `// ChatGPT
 loading(900);
 hold({amount: 1000, reason: "Input tokens", intent: "fixed_price"}, {amount: 2000, reason: "Output tokens"}, {amount: 2200, reason: "Chat history"});
 stream();
@@ -104,11 +107,11 @@ charge({amount: 1000, reason: "Input tokens"}, {amount: 2000, reason: "Output to
 `
             },
 
-            imageBot: {
-                label: "Image gen bot",
+            SDXL: {
+                label: "SDXL",
                 totalPoints: 20000,
                 threshold: 5000,
-                code: `// Image gen bot
+                code: `// SDXL
 loading(900);
 hold({amount: 1000, reason: "Image generation (flat)", intent: "fixed_price"});
 image();
@@ -116,11 +119,12 @@ charge({amount: 1000, reason: "Image generation (flat)"});
 `
             },
 
-            payAsYouGoBot: {
-                label: "Pay as you go bot",
+            PayAsYouGoBot: {
+                label: "PayAsYouGoBot",
                 totalPoints: 20000,
                 threshold: 5000,
-                code: `// Bot keeps charging
+                code: `// This bot will issue multiple charges crossing the threshold
+// No upfront hold, therefore user gets multiple alerts
 loading(900);
 charge({amount: 2000, reason: "ChatGPT Message"});
 charge({amount: 2000, reason: "ChatGPT Message"});
@@ -131,34 +135,46 @@ charge({amount: 10000, reason: "GPT-4 Message"});
 stream();
 `
             },
-            generousEstimate: {
-                label: "Generous estimate bot",
+            GenerousEstimateBot: {
+                label: "GenerousEstimateBot",
                 totalPoints: 20000,
                 threshold: 5000,
-                code: `// Generous estimate
+                code: `// This bot attempts to hold max amounnt of points and then charges the correct amount
 loading(900);
 hold({amount: 10000, reason: "Input tokens", intent: "upper_limit"}, {amount: 10000, reason: "Output tokens"});
 stream();
 charge({amount: 2000, reason: "Input tokens"}, {amount: 2000, reason: "Output tokens"});
                 `
             },
-            tooExpensiveBot: {
-                label: "Too expensive bot",
+            TooExpensiveBot: {
+                label: "TooExpensiveBot",
                 totalPoints: 20000,
                 threshold: 5000,
-                code: `// Too expensive bot
+                code: `// Will fail
 loading(900);
 charge({amount: 200000, reason: "Input tokens"}, {amount: 200000, reason: "Output tokens"});
 stream();
 `
             },
-            dependencyBot: {
-                label: "Dependency bot",
+            DependencyBotNoHolds: {
+                label: "DependencyBotNoHolds",
                 totalPoints: 20000,
                 threshold: 7000,
-                code: `// Dependency bot
+                code: `// User gets asked for Creator price approval
 loading(900);
-dependency("systemBot", "System bot");
+dependency("ChatGPT", "LLM Message");
+charge({amount: 2000, reason: "Creator price"});
+stream();
+`
+            },
+            DependencyBot: {
+                label: "DependencyBot",
+                totalPoints: 20000,
+                threshold: 7000,
+                code: `// Bot estimates the cost of ChatGPT and then charges the user
+loading(900);
+hold({amount: 2000, reason: "Creator price"}, {amount: get_estimate("ChatGPT"), reason: "LLM Message"});
+dependency("ChatGPT", "LLM Message");
 charge({amount: 2000, reason: "Creator price"});
 stream();
 `
@@ -249,11 +265,11 @@ stream();
 
                 <div id="triggeredHoldsSection" style="display: ${transactionTriggers.length > 0 ? 'block' : 'none'}">
                     <strong class="mb-2">Rejected charges</strong>
-                    ${receiptTemplate(transactionTriggers, [])}
+                    ${receiptTemplate(transactionTriggers)}
                 </div>
                 <div id="chargedItemsSection" style="display: ${charges.length > 0 ? 'block' : 'none'}" class="mt-2">
                     <strong class="mb-2">Already charged</strong>
-                    ${receiptTemplate(charges, [])}
+                    ${receiptTemplate(charges)}
                 </div>
             `;
         }
@@ -288,12 +304,12 @@ stream();
                 ${accordionTemplate({
                 content: `<div id="chargedItemsSection" style="display: ${charges.length > 0 ? 'block' : 'none'}" class="mt-2">
                     <div class="mb-2"><strong class="mb-2">Previous charges</strong></div>
-                    ${receiptTemplate(charges, [])}
+                    ${receiptTemplate(charges)}
                 </div>
                 
                 <div id="triggeredHoldsSection" style="display: ${transactionTriggers.length > 0 ? 'block' : 'none'}">
                     <div class="mb-2 mt-4"><strong>Pending charges</strong></div>
-                    ${receiptTemplate(transactionTriggers, [])}
+                    ${receiptTemplate(transactionTriggers)}
                 </div>
                 <div id="currentHoldSection" style="display: ${total_holds_only_approved > 0 ? 'block' : 'none'}" class="mt-4">
                     <strong>Current Hold:</strong> <span id="currentHold">${total_holds_only_approved} compute points</span>
@@ -313,7 +329,7 @@ stream();
             `;
         }
 
-        function receiptTemplate(charges, holds) {
+        function receiptTemplate(charges) {
             const groupedCharges = charges.reduce((result, item) => {
                 if (item.dependencyLine) {
                     const existingGroup = result.find(group => Array.isArray(group) && group[0].dependencyLine === item.dependencyLine);
@@ -328,7 +344,7 @@ stream();
                 return result;
             }, []);
 
-            const summedCharged = groupedCharges.map((group) => {
+            const summedCharges = groupedCharges.map((group) => {
                 if (Array.isArray(group)) {
                     const totalAmount = group.reduce((sum, item) => sum + item.amount, 0);
                     return {
@@ -338,6 +354,7 @@ stream();
                 }
                 return group;
             });
+
 
             return `
                 <div class="overflow-x-auto">
@@ -350,7 +367,7 @@ stream();
                             </tr>
                         </thead>
                         <tbody>
-                            ${summedCharged.map((charge, index) => `
+                            ${summedCharges.map((charge, index) => `
                                 <tr>
                                     <th>${index + 1}</th>
                                     <td>${charge.reason}</td>
@@ -362,7 +379,7 @@ stream();
                             <tr>
                                 <th></th>
                                 <th>Total Charges:</th>
-                                <th>${charges.reduce((sum, charge) => sum + charge.amount, 0)}</th>
+                                <th>${summedCharges.reduce((sum, charge) => sum + charge.amount, 0)}</th>
                             </tr>
                         </tfoot>
                     </table>
@@ -387,11 +404,13 @@ stream();
         let holds = [];
         let alertShown = null;
         let currentLine = 0;
+        let lastDependencyLine = 0;
         let lines = [];
         let originalThreshold = 0;
         let newThreshold = null;
 
         function dependency(botName, billingLabel) {
+            lastDependencyLine = currentLine;
             // find dependency or throw
             const { code } = tabsConfig[botName]
             if (!code) {
@@ -403,13 +422,12 @@ stream();
 
             // insert dependency lines into lines after current
             lines.splice(currentLine + 1, 0, ...dependencyLines)
-            console.log(lines)
         }
 
         function dependency_charge(botName, billingLabel, ...objs) {
             const unapprovedCharges = objs.map(obj => {
                 validateIntent(obj.intent);
-                return { ...obj, dependencyLine: currentLine, botName, billingLabel };
+                return { ...obj, dependencyLine: lastDependencyLine, botName, billingLabel };
             });
 
             checkThreshold("charge", unapprovedCharges, {
@@ -435,7 +453,23 @@ stream();
             });
         }
 
+        function dependency_hold(botName, billingLabel, ...objs) {
+            const unapprovedHolds = objs.map(obj => {
+                validateIntent(obj.intent);
+                return { ...obj, dependencyLine: currentLine, botName, billingLabel };
+            });
+
+            checkThreshold("hold", unapprovedHolds, {
+                onProceed() {
+                    for (let obj of unapprovedHolds) {
+                        holds.push({ ...obj });
+                    }
+                }
+            });
+        }
+
         function hold(...objs) {
+            console.log(objs)
             const unapprovedHolds = objs.map(obj => {
                 validateIntent(obj.intent);
                 return { ...obj };
@@ -496,6 +530,16 @@ stream();
             }
         }
 
+        function get_estimate(botName) {
+            const { code } = tabsConfig[botName]
+            if (!code) {
+                throw new Error(`Bot ${botName} not found`);
+            }
+
+            const holds = sumAllHolds(code);
+            return holds;
+        }
+
         async function image(url = "https://pfst.cf2.poecdn.net/base/image/83bdbab456ef93ceec5196e233f3fb8a921b9ee3915b1a4994c90b0b78506775?w=1024&h=1024&pmaid=87206985") {
             document.getElementById("output").innerHTML = `<img src="${url}" class="w-full h-auto" />`;
         }
@@ -513,7 +557,6 @@ stream();
         }
 
         function checkThreshold(transactionType, transactionTriggers = [], { onProceed = null, onCancel = null }) {
-            console.log({ transactionType, transactionTriggers })
             const tabId = getTabId();
 
             const chargesWithUnapproved = transactionType === "charge" ? [...charges, ...transactionTriggers] : charges;
@@ -534,8 +577,6 @@ stream();
                 return
             }
 
-
-
             const threshold = document.getElementById(`threshold-${tabId}`).value;
 
 
@@ -552,6 +593,22 @@ stream();
             } else {
                 onProceed?.();
             }
+        }
+
+        function sumAllHolds(code) {
+            let totalHold = 0;
+
+            // Function to simulate the hold operation
+            function estimate_hold(...objs) {
+                for (let obj of objs) {
+                    totalHold += obj.amount;
+                }
+            }
+
+            // Execute the code and filter holds
+            code.split("\n").filter(line => line.startsWith("hold(")).map(line => line.replace("hold(", "estimate_hold(")).forEach(line => eval(line));
+
+            return totalHold;
         }
 
         function getActiveBotLabel() {
@@ -579,6 +636,8 @@ stream();
                     await eval(line);
                 } else if (line.startsWith("dependency_charge(")) {
                     await eval(line);
+                } else if (line.startsWith("dependency_hold(")) {
+                    await eval(line);
                 }
                 else {
                     continue;
@@ -591,7 +650,7 @@ stream();
 
             try {
                 document.getElementById(`run-${tabId}`).disabled = false;
-                document.getElementById("receipt").innerHTML = `<h2 class="text-xl font-bold mb-4">Receipt</h2>${receiptTemplate(charges, holds)}`;
+                document.getElementById("receipt").innerHTML = `<h2 class="text-xl font-bold mb-4">Receipt</h2>${receiptTemplate(charges)}`;
             } catch (e) {
                 // do nothing yolo
             }
@@ -632,7 +691,6 @@ stream();
         });
 
         document.getElementById("cancelBtn").addEventListener("click", (e) => {
-            console.log("Cancelled");
             const tabId = getTabId()
             const { onCancel } = alertShown;
 
