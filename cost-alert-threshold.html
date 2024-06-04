@@ -38,6 +38,8 @@
             <div id="tabContent" class="tab-content"></div>
             <div class="mt-8">
                 <h2 class="text-xl font-bold mb-4">API Documentation</h2>
+                This is NOT a Bot Creator API draft
+                <br><br>
                 The script splits the code by lines. Each line is evaluated one by one. Don't use multi line
                 statements.<br><br>
 
@@ -47,6 +49,9 @@
                 <ul class="list-disc pl-6 pr-4">
                     <li>
                         <code>dependency(botName: string, billingLabel: string)</code>
+                    </li>
+                    <li class="mt-4">
+                        <code>get_estimate(botName: string)</code>
                     </li>
                     <li class="mt-4">
                         <code>charge(...objs: {amount: number, reason: string}[], intent: "fixed_price" | "flexible" = "flexible")</code>
@@ -356,7 +361,6 @@ stream();
                 return group;
             });
             
-            console.log(summedCharges)
 
 
             return `
@@ -434,7 +438,6 @@ stream();
                 return { ...obj, type: "charge", dependencyLine: lastDependencyLine, botName, billingLabel };
             });
 
-            console.log("dependency_charge", objs)
 
             checkThreshold("charge", unapprovedCharges, {
                 onProceed() {
@@ -465,8 +468,6 @@ stream();
                 validateIntent(obj.intent);
                 return { ...obj, type: "hold", dependencyLine: lastDependencyLine, botName, billingLabel };
             });
-
-            console.log("dependency_hold", unapprovedHolds)
 
             checkThreshold("hold", unapprovedHolds, {
                 onProceed() {
