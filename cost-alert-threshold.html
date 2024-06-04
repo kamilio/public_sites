@@ -348,6 +348,7 @@ stream();
                 if (Array.isArray(group)) {
                     const totalAmount = group.reduce((sum, item) => sum + item.amount, 0);
                     return {
+                        type: group[0].type,
                         amount: totalAmount,
                         reason: group[0].billingLabel
                     };
@@ -370,7 +371,7 @@ stream();
                             ${summedCharges.map((charge, index) => `
                                 <tr>
                                     <th>${index + 1}</th>
-                                    <td>${charge.reason}</td>
+                                    <td>${charge.type === "hold" ? `<i>${charge.reason}</i>` : charge.reason}</td>
                                     <td>${charge.amount}</td>
                                 </tr>
                             `).join('')}
@@ -418,7 +419,7 @@ stream();
             }
 
             // split lines of code, filter only charge and rename them to depenendency_charge
-            dependencyLines = code.split("\n").filter(line => line.startsWith("charge(")).map(line => line.replace("charge(", `dependency_charge("${botName}", "${billingLabel}", `))
+            dependencyLines = code.split("\n").filter(line => line.startsWith("charge(") || line.startsWith("hold()")).map(line => line.replace("charge(", `dependency_charge("${botName}", "${billingLabel}", `).replace("hold(", `dependency_hold("${botName}", "${billingLabel}", `))
 
             // insert dependency lines into lines after current
             lines.splice(currentLine + 1, 0, ...dependencyLines)
@@ -427,7 +428,7 @@ stream();
         function dependency_charge(botName, billingLabel, ...objs) {
             const unapprovedCharges = objs.map(obj => {
                 validateIntent(obj.intent);
-                return { ...obj, dependencyLine: lastDependencyLine, botName, billingLabel };
+                return { ...obj, type: "charge", dependencyLine: lastDependencyLine, botName, billingLabel };
             });
 
             checkThreshold("charge", unapprovedCharges, {
@@ -439,10 +440,11 @@ stream();
             });
         }
 
-        function charge(...unapprovedCharges) {
-            for (let obj of unapprovedCharges) {
+        function charge(...objs) {
+            const unapprovedCharges = objs.map(obj => {
                 validateIntent(obj.intent);
-            }
+                return { ...obj, type: "charge" };
+            });
 
             checkThreshold("charge", unapprovedCharges, {
                 onProceed() {
@@ -456,7 +458,7 @@ stream();
         function dependency_hold(botName, billingLabel, ...objs) {
             const unapprovedHolds = objs.map(obj => {
                 validateIntent(obj.intent);
-                return { ...obj, dependencyLine: currentLine, botName, billingLabel };
+                return { ...obj, type: "hold", dependencyLine: lastDependencyLine, botName, billingLabel };
             });
 
             checkThreshold("hold", unapprovedHolds, {
@@ -471,7 +473,7 @@ stream();
         function hold(...objs) {
             const unapprovedHolds = objs.map(obj => {
                 validateIntent(obj.intent);
-                return { ...obj };
+                return { ...obj, type: "hold" };
             });
             checkThreshold("hold", unapprovedHolds, {
                 onProceed() {
