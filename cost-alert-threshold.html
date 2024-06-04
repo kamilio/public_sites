@@ -162,8 +162,8 @@ stream();
                 threshold: 7000,
                 code: `// User gets asked for Creator price approval
 loading(900);
-dependency("ChatGPT", "LLM Message");
 charge({amount: 2000, reason: "Creator price"});
+dependency("ChatGPT", "LLM Message");
 stream();
 `
             },
@@ -355,6 +355,8 @@ stream();
                 }
                 return group;
             });
+            
+            console.log(summedCharges)
 
 
             return `
@@ -419,17 +421,20 @@ stream();
             }
 
             // split lines of code, filter only charge and rename them to depenendency_charge
-            dependencyLines = code.split("\n").filter(line => line.startsWith("charge(") || line.startsWith("hold()")).map(line => line.replace("charge(", `dependency_charge("${botName}", "${billingLabel}", `).replace("hold(", `dependency_hold("${botName}", "${billingLabel}", `))
+            dependencyLines = code.split("\n").filter(line => line.startsWith("charge(") || line.startsWith("hold(")).map(line => line.replace("charge(", `dependency_charge("${botName}", "${billingLabel}", `).replace("hold(", `dependency_hold("${botName}", "${billingLabel}", `))
 
             // insert dependency lines into lines after current
             lines.splice(currentLine + 1, 0, ...dependencyLines)
         }
 
         function dependency_charge(botName, billingLabel, ...objs) {
+            
             const unapprovedCharges = objs.map(obj => {
                 validateIntent(obj.intent);
                 return { ...obj, type: "charge", dependencyLine: lastDependencyLine, botName, billingLabel };
             });
+
+            console.log("dependency_charge", objs)
 
             checkThreshold("charge", unapprovedCharges, {
                 onProceed() {
@@ -461,10 +466,12 @@ stream();
                 return { ...obj, type: "hold", dependencyLine: lastDependencyLine, botName, billingLabel };
             });
 
+            console.log("dependency_hold", unapprovedHolds)
+
             checkThreshold("hold", unapprovedHolds, {
                 onProceed() {
                     for (let obj of unapprovedHolds) {
-                        holds.push({ ...obj });
+                        holds.push(obj);
                     }
                 }
             });
@@ -561,6 +568,7 @@ stream();
             const tabId = getTabId();
 
             const chargesWithUnapproved = transactionType === "charge" ? [...charges, ...transactionTriggers] : charges;
+            const apprvedChargesSum = charges.reduce((sum, charge) => sum + charge.amount, 0);
             const total_charges = chargesWithUnapproved.reduce((sum, charge) => sum + charge.amount, 0);
 
             const holdsWithUnapproved = transactionType === "hold" ? [...holds, ...transactionTriggers] : holds;
@@ -582,7 +590,7 @@ stream();
 
 
             if ((transactionType === "charge" && total_charges > total_holds && total_charges > threshold && !alertShown) ||
-                (transactionType === "hold" && total_holds > threshold && !alertShown)) {
+                (transactionType === "hold" && total_holds + apprvedChargesSum > threshold && !alertShown)) {
 
                 newThreshold = Math.max(parseInt(threshold) + parseInt(originalThreshold), total_holds, total_charges);
 
