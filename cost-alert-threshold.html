@@ -409,6 +409,7 @@ stream();
         let total_compute_points = 0;
         let charges = [];
         let holds = [];
+        let dependency_holds = [];
         let alertShown = null;
         let currentLine = 0;
         let lastDependencyLine = 0;
@@ -416,7 +417,8 @@ stream();
         let originalThreshold = 0;
         let newThreshold = null;
 
-        function dependency(botName, billingLabel) {
+        function dependency(botName, billingLabel = undefined) {
+            billingLabel = billingLabel || botName;
             lastDependencyLine = currentLine;
             // find dependency or throw
             const { code } = tabsConfig[botName]
@@ -434,6 +436,7 @@ stream();
         function dependency_charge(botName, billingLabel, ...objs) {
             
             const unapprovedCharges = objs.map(obj => {
+                console.log("dependency charge", {obj})
                 validateIntent(obj.intent);
                 return { ...obj, type: "charge", dependencyLine: lastDependencyLine, botName, billingLabel };
             });
@@ -450,6 +453,7 @@ stream();
 
         function charge(...objs) {
             const unapprovedCharges = objs.map(obj => {
+                console.log("charge", {obj})
                 validateIntent(obj.intent);
                 return { ...obj, type: "charge" };
             });
@@ -464,15 +468,17 @@ stream();
         }
 
         function dependency_hold(botName, billingLabel, ...objs) {
+            
             const unapprovedHolds = objs.map(obj => {
+                console.log("dependency hold", {obj})
                 validateIntent(obj.intent);
                 return { ...obj, type: "hold", dependencyLine: lastDependencyLine, botName, billingLabel };
             });
 
-            checkThreshold("hold", unapprovedHolds, {
+            checkThreshold("dependency_hold", unapprovedHolds, {
                 onProceed() {
                     for (let obj of unapprovedHolds) {
-                        holds.push(obj);
+                        dependency_holds.push(obj);
                     }
                 }
             });
@@ -480,6 +486,7 @@ stream();
 
         function hold(...objs) {
             const unapprovedHolds = objs.map(obj => {
+                console.log("hold", {obj})
                 validateIntent(obj.intent);
                 return { ...obj, type: "hold" };
             });
@@ -566,15 +573,31 @@ stream();
         }
 
         function checkThreshold(transactionType, transactionTriggers = [], { onProceed = null, onCancel = null }) {
+            const total_charges_only_approved = charges.reduce((sum, charge) => sum + charge.amount, 0);
+            const total_holds_only_approved = holds.reduce((sum, hold) => sum + hold.amount, 0);
+            const total_dependency_holds_only_approved = dependency_holds.reduce((sum, hold) => sum + hold.amount, 0);
+
+            const pointsAvailableInHolds =  total_holds_only_approved - total_charges_only_approved - total_dependency_holds_only_approved;
+
             const tabId = getTabId();
+            // dependency hold should be counted against hold
+            if (transactionType === "dependency_hold") {
+                const trigger_dependency_holds_total = transactionTriggers.reduce((sum, hold) => sum + hold.amount, 0);
+                if (pointsAvailableInHolds < trigger_dependency_holds_total) {
+                    const missingPoints = trigger_dependency_holds_total - pointsAvailableInHolds;
+                    transactionTriggers = [{ amount: missingPoints, reason: transactionTriggers[0].billingLabel, type: "hold" }]
+                    transactionType = "hold";
+                } else {
+                    onProceed?.();
+                }
+            }
 
             const chargesWithUnapproved = transactionType === "charge" ? [...charges, ...transactionTriggers] : charges;
-            const apprvedChargesSum = charges.reduce((sum, charge) => sum + charge.amount, 0);
             const total_charges = chargesWithUnapproved.reduce((sum, charge) => sum + charge.amount, 0);
 
             const holdsWithUnapproved = transactionType === "hold" ? [...holds, ...transactionTriggers] : holds;
-            let total_holds = holdsWithUnapproved.reduce((sum, hold) => sum + hold.amount, 0);
-            let total_holds_only_approved = holds.reduce((sum, hold) => sum + hold.amount, 0);
+            const total_holds = holdsWithUnapproved.reduce((sum, hold) => sum + hold.amount, 0) - total_charges_only_approved;
+            
 
             // total limit
             const totalPoints = parseInt(document.getElementById(`totalPoints-${tabId}`).value);
@@ -591,7 +614,7 @@ stream();
 
 
             if ((transactionType === "charge" && total_charges > total_holds && total_charges > threshold && !alertShown) ||
-                (transactionType === "hold" && total_holds + apprvedChargesSum > threshold && !alertShown)) {
+                (transactionType === "hold" && total_holds + total_charges_only_approved > threshold && !alertShown)) {
 
                 newThreshold = Math.max(parseInt(threshold) + parseInt(originalThreshold), total_holds, total_charges);
 
