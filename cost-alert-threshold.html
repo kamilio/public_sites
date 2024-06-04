@@ -469,7 +469,6 @@ stream();
         }
 
         function hold(...objs) {
-            console.log(objs)
             const unapprovedHolds = objs.map(obj => {
                 validateIntent(obj.intent);
                 return { ...obj };
@@ -650,7 +649,10 @@ stream();
 
             try {
                 document.getElementById(`run-${tabId}`).disabled = false;
-                document.getElementById("receipt").innerHTML = `<h2 class="text-xl font-bold mb-4">Receipt</h2>${receiptTemplate(charges)}`;
+                const chargesSum = charges.reduce((sum, charge) => sum + charge.amount, 0);
+                const totalPoints = parseInt(document.getElementById(`totalPoints-${tabId}`).value);
+                const remainingPoints = totalPoints - chargesSum;
+                document.getElementById("receipt").innerHTML = `<h2 class="text-xl font-bold mb-4">Receipt</h2>${receiptTemplate(charges)}<br><br>Remaining points: <strong>${remainingPoints}</strong>`;
             } catch (e) {
                 // do nothing yolo
             }
