@@ -582,8 +582,9 @@ stream();
             const tabId = getTabId();
             // dependency hold should be counted against hold
             if (transactionType === "dependency_hold") {
+                console.log({pointsAvailableInHolds, transactionTriggers})
                 const trigger_dependency_holds_total = transactionTriggers.reduce((sum, hold) => sum + hold.amount, 0);
-                if (pointsAvailableInHolds < trigger_dependency_holds_total) {
+                if (pointsAvailableInHolds < trigger_dependency_holds_total && pointsAvailableInHolds > 0) {
                     const missingPoints = trigger_dependency_holds_total - pointsAvailableInHolds;
                     transactionTriggers = [{ amount: missingPoints, reason: transactionTriggers[0].billingLabel, type: "hold" }]
                     transactionType = "hold";
@@ -699,6 +700,7 @@ stream();
             total_compute_points = 0;
             charges = [];
             holds = [];
+            dependency_holds = [];
             alertShown = null;
             currentLine = 0;
 
