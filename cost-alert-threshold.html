@@ -183,8 +183,18 @@ dependency("ChatGPT", "LLM Message");
 charge({amount: 2000, reason: "Creator price"});
 stream();
 `
+            },
+            ErrorBot: {
+                label: "ErrorBot",
+                totalPoints: 20000,
+                threshold: 5000,
+                code: `// Will fail
+loading(900);
+// creator will charge 2000 points
+charge({amount: 2000, reason: "ChatGPT"});
+error("And stops here");
+`
             }
-
         };
 
         function renderTabs() {
@@ -451,6 +461,10 @@ stream();
             });
         }
 
+        function error(message = "Error occurred") {
+            document.getElementById("output").innerHTML = `<pre class="text-error">${message}</pre>`;
+        }
+
         function charge(...objs) {
             const unapprovedCharges = objs.map(obj => {
                 console.log("charge", {obj})
@@ -662,7 +676,7 @@ stream();
                     await eval(line);
                 } else if (line.startsWith("print(")) {
                     await eval(line);
-                } else if (line.startsWith("image(")) {
+                } else if (line.startsWith("image(")) { 
                     await eval(line);
                 } else if (line.startsWith("clear()")) {
                     await eval(line);
@@ -672,6 +686,9 @@ stream();
                     await eval(line);
                 } else if (line.startsWith("dependency_hold(")) {
                     await eval(line);
+                } else if (line.startsWith("error")) {
+                    await eval(line);
+                    break
                 }
                 else {
                     continue;
