@@ -194,7 +194,20 @@ loading(900);
 charge({amount: 2000, reason: "ChatGPT"});
 error("And stops here");
 `
-            }
+            },
+            ChargeAboveHoldBot: {
+                label: "ChargeAboveHoldBot",
+                totalPoints: 20000,
+                threshold: 5000,
+                code: `// Will auto-hold
+loading(900);
+hold({amount: 5000, reason: "EssayWriter"});
+charge({amount: 4000, reason: "EssayWriter"});
+hold({amount: 1000, reason: "Creator cut"});
+charge({amount: 2000, reason: "Creator cut"});
+stream();
+`
+            },
         };
 
         function renderTabs() {
