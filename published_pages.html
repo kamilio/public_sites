@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html data-theme="light">
+<head>
+  <title>Article Cards</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@2.51.6/dist/full.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .truncate-lines {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;  
+      -webkit-line-clamp: 3;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div class="flex justify-center">
+    <div id="article-container" class="p-4 w-full max-w-[800px]">
+    </div>
+  </div>
+
+  <script>
+    const articleContainer = document.getElementById('article-container');
+    const profilePics = [
+      'https://psc2.cf2.poecdn.net/assets/_next/static/media/assistant.b077c338.svg',
+      'https://qph.cf2.poecdn.net/main-thumb-pb-1012-200-zgsjkgmkvwlyruffvyacfdyvzdeetqld.jpeg'
+    ];
+
+    function generateRandomText(wordCount) {
+      const gibberish = 'lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua';
+      const words = gibberish.split(' ');
+      const randomWords = [];
+
+      for (let i = 0; i < wordCount; i++) {
+        const randomIndex = Math.floor(Math.random() * words.length);
+        randomWords.push(words[randomIndex]);
+      }
+
+      return randomWords.join(' ');
+    }
+
+    function createArticleCard() {
+      const card = document.createElement('div');
+      card.className = 'card bg-base-100 shadow-xl mb-4';
+
+      const cardBody = document.createElement('div');
+      cardBody.className = 'card-body grid grid-cols-4 gap-4';
+
+      const imgContainer = document.createElement('div');
+      imgContainer.className = 'col-span-1';
+      const img = document.createElement('img');
+      img.src = profilePics[Math.floor(Math.random() * profilePics.length)];
+      img.alt = 'Profile';
+      img.className = 'w-24 h-24 rounded-full';
+      imgContainer.appendChild(img);
+      cardBody.appendChild(imgContainer);
+
+      const contentContainer = document.createElement('div');
+      contentContainer.className = 'col-span-3';
+
+      const title = document.createElement('h2');
+      title.className = 'card-title';
+      title.textContent = generateRandomText(3);
+      contentContainer.appendChild(title);
+
+      const content = document.createElement('p');
+      content.className = 'truncate-lines';
+      content.textContent = generateRandomText(20);
+      contentContainer.appendChild(content);
+
+      cardBody.appendChild(contentContainer);
+      card.appendChild(cardBody);
+
+      return card;
+    }
+
+    function loadArticles() {
+      for (let i = 0; i < 20; i++) {
+        const articleCard = createArticleCard();
+        articleContainer.appendChild(articleCard);
+      }
+    }
+
+    window.addEventListener('scroll', () => {
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight) {
+        loadArticles();
+      }
+    });
+
+    loadArticles();
+  </script>
+</body>
+</html>
