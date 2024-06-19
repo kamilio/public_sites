@@ -51,7 +51,7 @@
       kamilLeaveEnd.setMonth(kamilLeaveEnd.getMonth() + 1);
       
       const wifeLeaveEnd = new Date(birthDate);
-      wifeLeaveEnd.setMonth(wifeLeaveEnd.getMonth() + 4);
+      wifeLeaveEnd.setDate(wifeLeaveEnd.getDate() + 105); // 3.5 months
       
       const kamilSecondLeaveStart = new Date(wifeLeaveEnd);
       const kamilSecondLeaveEnd = new Date(wifeLeaveEnd);
