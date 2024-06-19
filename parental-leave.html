@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html data-theme="corporate">
+<head>
+  <title>Kamil's Parental Leave Calculator</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@2.51.6/dist/full.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div class="min-h-screen flex flex-col">
+    <h1 class="text-4xl font-bold text-center my-8">Kamil's Parental Leave Calculator</h1>
+    
+    <div class="flex-grow flex justify-center items-center">
+      <div class="card w-full max-w-2xl bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">Enter Birth Date</h2>
+          <input id="birthDate" type="date" class="input input-bordered w-full max-w-xs" value="2024-07-04" />
+          <div id="result" class="mt-6 grid grid-cols-1 gap-4">
+            <div class="card bg-blue-500 text-white">
+              <div class="card-body">
+                <h2 class="card-title">Kamil's first leave</h2>
+                <p id="kamilFirstLeave"></p>
+              </div>
+            </div>
+            
+            <div class="card bg-green-500 text-white">
+              <div class="card-body">
+                <h2 class="card-title">Kamil's second leave</h2>
+                <p id="kamilSecondLeave"></p>
+              </div>
+            </div>
+          </div>
+          <div id="calendar" class="mt-6"></div>
+        </div>
+      </div>
+    </div>
+    
+    <footer class="footer footer-center p-5 bg-primary text-primary-content">
+      <div>
+        <p>
+          Created by <a href="https://poe.com/WebsitePrototyperBot" target="_blank">WebsitePrototyperBot on Poe</a>
+        </p>
+      </div> 
+    </footer>
+  </div>
+
+  <script>
+    function calculateLeave() {
+      const birthDate = new Date(document.getElementById('birthDate').value);
+      const kamilLeaveStart = new Date(birthDate);
+      const kamilLeaveEnd = new Date(birthDate);
+      kamilLeaveEnd.setMonth(kamilLeaveEnd.getMonth() + 1);
+      
+      const wifeLeaveEnd = new Date(birthDate);
+      wifeLeaveEnd.setMonth(wifeLeaveEnd.getMonth() + 4);
+      
+      const kamilSecondLeaveStart = new Date(wifeLeaveEnd);
+      const kamilSecondLeaveEnd = new Date(wifeLeaveEnd);
+      kamilSecondLeaveEnd.setMonth(kamilSecondLeaveEnd.getMonth() + 2);
+      
+      document.getElementById('kamilFirstLeave').textContent = `${formatDate(kamilLeaveStart)} - ${formatDate(kamilLeaveEnd)}`;
+      document.getElementById('kamilSecondLeave').textContent = `${formatDate(kamilSecondLeaveStart)} - ${formatDate(kamilSecondLeaveEnd)}`;
+      
+      renderCalendar(birthDate, kamilLeaveStart, kamilLeaveEnd, kamilSecondLeaveStart, kamilSecondLeaveEnd);
+    }
+
+    function formatDate(date) {
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+    
+    function renderCalendar(birthDate, kamilLeaveStart, kamilLeaveEnd, kamilSecondLeaveStart, kamilSecondLeaveEnd) {
+      const calendarDiv = document.getElementById('calendar');
+      calendarDiv.innerHTML = '';
+      
+      const startDate = new Date(birthDate.getFullYear(), birthDate.getMonth(), 1);
+      const endDate = new Date(kamilSecondLeaveEnd.getFullYear(), kamilSecondLeaveEnd.getMonth() + 1, 0);
+      
+      let currentDate = new Date(startDate);
+      
+      while (currentDate <= endDate) {
+        const monthDiv = document.createElement('div');
+        monthDiv.classList.add('mb-4');
+        
+        const monthTitle = document.createElement('h3');
+        monthTitle.classList.add('text-lg', 'font-bold', 'mb-2');
+        monthTitle.textContent = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+        monthDiv.appendChild(monthTitle);
+        
+        const daysDiv = document.createElement('div');
+        daysDiv.classList.add('grid', 'grid-cols-7', 'gap-2');
+        
+        const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+        const firstDayOfWeek = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+        
+        for (let i = 0; i < firstDayOfWeek; i++) {
+          const emptyDiv = document.createElement('div');
+          daysDiv.appendChild(emptyDiv);
+        }
+        
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dayDiv = document.createElement('div');
+          dayDiv.classList.add('bg-base-200', 'text-center', 'py-2', 'rounded');
+          
+          const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+          
+          if (date >= kamilLeaveStart && date <= kamilLeaveEnd) {
+            dayDiv.classList.add('bg-blue-500', 'text-white');
+          } else if (date >= kamilSecondLeaveStart && date <= kamilSecondLeaveEnd) {
+            dayDiv.classList.add('bg-green-500', 'text-white');
+          }
+          
+          dayDiv.textContent = day;
+          daysDiv.appendChild(dayDiv);
+        }
+        
+        monthDiv.appendChild(daysDiv);
+        calendarDiv.appendChild(monthDiv);
+        
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      }
+    }
+    
+    document.getElementById('birthDate').addEventListener('change', calculateLeave);
+    calculateLeave();
+  </script>
+</body>
+</html>
