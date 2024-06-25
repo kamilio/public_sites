@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html data-theme="corporate">
+<head>
+  <title>Price Calculator</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@2.51.6/dist/full.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tab-content {
+      min-height: 200px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+    .tab-pane {
+      display: none;
+    }
+    .tab-pane.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex flex-col">
+    <div class="container">
+      <h1 class="text-4xl font-bold text-center my-8">Price Calculator</h1>
+      
+      <div class="flex-grow">
+        <div class="tabs" id="config-tabs">
+          <!-- Tabs will be dynamically generated here -->
+        </div>
+        <div class="tab-content p-4 bg-base-100 rounded-lg shadow-md">
+          <!-- Tab panes will be dynamically generated here -->
+        </div>
+        
+        <div class="text-center mt-8">
+          <h2 class="text-2xl font-bold mb-4">Price Breakdown</h2>
+          <table class="table table-compact w-full shadow-md">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Price</th>
+              </tr>
+            </thead>
+            <tbody id="price-breakdown">
+              <!-- Price breakdown rows will be dynamically generated here -->
+            </tbody>
+            <tfoot>
+              <tr>
+                <th>Total</th>
+                <th id="total-price">0</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+      
+      <footer class="footer footer-center p-5 bg-primary text-primary-content mt-8">
+        <div>
+          <p>
+            Created by <a href="https://poe.com/WebsitePrototyperBot" target="_blank">WebsitePrototyperBot on Poe</a>
+          </p>
+        </div> 
+      </footer>
+    </div>
+  </div>
+  
+  <script>
+    const config = [
+      {
+        label: "Token based pricing",
+        input: "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
+        pricingRules: [
+          {
+            price: 500,
+            type: "flat",
+            label: "Processing Cost"
+          },
+          {
+            type: "per_token",
+            price: 10,
+            tokenizer: "GPT-4",
+            label: "User Input"
+          },
+          {
+            type: "per_image",
+            price: 500,
+            label: "Image Processing"
+          }
+        ]
+      },
+      {
+        label: "Image input",
+        input: "Another input example [image] [image]",
+        pricingRules: [
+          {
+            price: 200,
+            type: "flat",
+            label: "Base Cost"
+          },
+          {
+            type: "per_image",
+            price: 500,
+            label: "Image Processing"
+          }
+        ]
+      }
+    ];
+    
+    const pricingFunctions = {
+      flat: (rule) => rule.price,
+      per_token: (rule, input) => getTokenLength(input) * rule.price,
+      per_image: (rule, input) => (input.match(/\[image\]/g) || []).length * rule.price
+    };
+    
+    function displayPricingRules(index) {
+      const pricingRulesElement = document.getElementById(`pricing-rules-${index}`);
+      pricingRulesElement.textContent = JSON.stringify(config[index].pricingRules, null, 2);
+    }
+    
+    function calculatePrice(index) {
+      const input = config[index].input;
+      const priceBreakdown = document.getElementById("price-breakdown");
+      const totalPriceElement = document.getElementById("total-price");
+      let totalPrice = 0;
+      
+      priceBreakdown.innerHTML = "";
+      
+      config[index].pricingRules.forEach(rule => {
+        const price = pricingFunctions[rule.type](rule, input);
+        totalPrice += price;
+        
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${rule.label || rule.type}</td>
+          <td>${price}</td>
+        `;
+        priceBreakdown.appendChild(row);
+      });
+      
+      totalPriceElement.textContent = totalPrice;
+    }
+    
+    function getTokenLength(text) {
+      const words = text.split(/\s+/);
+      let tokenLength = 0;
+      
+      words.forEach(word => {
+        if (word !== "[image]") {
+          tokenLength += 1;
+          if (word.length > 4) {
+            tokenLength += Math.floor(word.length / 4);
+          }
+        }
+      });
+      
+      tokenLength += (text.match(/[^\w\s]/g) || []).length;
+      
+      return tokenLength;
+    }
+    
+    function generateTabs() {
+  const configTabs = document.getElementById("config-tabs");
+  const tabContent = document.querySelector(".tab-content");
+  
+  config.forEach((item, index) => {
+    const tab = document.createElement("a");
+    tab.classList.add("tab", "tab-bordered");
+    tab.dataset.tab = `tab-${index}`;
+    tab.textContent = item.label;
+    configTabs.appendChild(tab);
+    
+    const tabPane = document.createElement("div");
+    tabPane.id = `tab-${index}`;
+    tabPane.classList.add("tab-pane");
+    tabPane.innerHTML = `
+      <pre id="pricing-rules-${index}" class="bg-base-200 p-4 rounded-lg mb-4"></pre>
+      <div class="bg-base-200 p-4 rounded-lg">${item.input}</div>
+    `;
+    tabContent.appendChild(tabPane);
+    
+    displayPricingRules(index);
+    
+    tab.addEventListener("click", () => {
+      configTabs.querySelectorAll(".tab").forEach(t => t.classList.remove("tab-active"));
+      tabContent.querySelectorAll(".tab-pane").forEach(pane => pane.classList.remove("active"));
+      
+      tab.classList.add("tab-active");
+      tabPane.classList.add("active");
+      
+      calculatePrice(index);
+    });
+    
+    // Auto-select the first tab
+    if (index === 0) {
+      tab.classList.add("tab-active");
+      tabPane.classList.add("active");
+    }
+  });
+  
+  // Calculate the price for the first tab
+  calculatePrice(0);
+}
+    
+    generateTabs();
+    calculatePrice(0);
+  </script>
+</body>
+</html>
