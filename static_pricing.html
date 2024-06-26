@@ -92,7 +92,7 @@
       },
       {
         label: "Image input",
-        input: "Another input example [image] [image]",
+        input: "Another input example [image] ",
         pricingRules: [
           {
             price: 200,
@@ -105,13 +105,42 @@
             label: "Image Processing"
           }
         ]
+      },
+      {
+        label: "Nested pricing",
+        input: "Another input example [attachment 1300]",
+        pricingRules: [
+          {
+            price: 200,
+            type: "flat",
+            label: "Base Cost"
+          },
+          {
+            type: "attachments",
+            pricingRules: [
+              {
+                type: "per_token",
+                price: 5,
+                tokenizer: "GPT-3",
+                label: "Attachments tokens"
+              }
+            ]
+          }
+        ]
       }
     ];
     
     const pricingFunctions = {
       flat: (rule) => rule.price,
       per_token: (rule, input) => getTokenLength(input) * rule.price,
-      per_image: (rule, input) => (input.match(/\[image\]/g) || []).length * rule.price
+      per_image: (rule, input) => (input.match(/\[image\]/g) || []).length * rule.price,
+      attachments: (rule, input) => {
+        let nestedPrice = 0;
+        rule.pricingRules.forEach(nestedRule => {
+          nestedPrice += pricingFunctions[nestedRule.type](nestedRule, input);
+        });
+        return nestedPrice;
+      }
     };
     
     function displayPricingRules(index) {
@@ -131,18 +160,39 @@
         const price = pricingFunctions[rule.type](rule, input);
         totalPrice += price;
         
-        const row = document.createElement("tr");
+        
+        
+        if (rule.type === "attachments") {
+          rule.pricingRules.forEach(nestedRule => {
+            const nestedPrice = pricingFunctions[nestedRule.type](nestedRule, input);
+            const nestedRow = document.createElement("tr");
+            nestedRow.innerHTML = `
+              <td>${nestedRule.label || nestedRule.type}</td>
+              <td>${nestedPrice}</td>
+            `;
+            priceBreakdown.appendChild(nestedRow);
+          });
+        } else {
+            const row = document.createElement("tr");
         row.innerHTML = `
           <td>${rule.label || rule.type}</td>
           <td>${price}</td>
         `;
         priceBreakdown.appendChild(row);
+        }
       });
       
       totalPriceElement.textContent = totalPrice;
     }
     
     function getTokenLength(text) {
+      const attachmentRegex = /\[attachment (\d+)\]/;
+      const match = text.match(attachmentRegex);
+      
+      if (match) {
+        return parseInt(match[1], 10);
+      }
+      
       const words = text.split(/\s+/);
       let tokenLength = 0;
       
@@ -161,47 +211,47 @@
     }
     
     function generateTabs() {
-  const configTabs = document.getElementById("config-tabs");
-  const tabContent = document.querySelector(".tab-content");
-  
-  config.forEach((item, index) => {
-    const tab = document.createElement("a");
-    tab.classList.add("tab", "tab-bordered");
-    tab.dataset.tab = `tab-${index}`;
-    tab.textContent = item.label;
-    configTabs.appendChild(tab);
-    
-    const tabPane = document.createElement("div");
-    tabPane.id = `tab-${index}`;
-    tabPane.classList.add("tab-pane");
-    tabPane.innerHTML = `
-      <pre id="pricing-rules-${index}" class="bg-base-200 p-4 rounded-lg mb-4"></pre>
-      <div class="bg-base-200 p-4 rounded-lg">${item.input}</div>
-    `;
-    tabContent.appendChild(tabPane);
-    
-    displayPricingRules(index);
-    
-    tab.addEventListener("click", () => {
-      configTabs.querySelectorAll(".tab").forEach(t => t.classList.remove("tab-active"));
-      tabContent.querySelectorAll(".tab-pane").forEach(pane => pane.classList.remove("active"));
+      const configTabs = document.getElementById("config-tabs");
+      const tabContent = document.querySelector(".tab-content");
       
-      tab.classList.add("tab-active");
-      tabPane.classList.add("active");
+      config.forEach((item, index) => {
+        const tab = document.createElement("a");
+        tab.classList.add("tab", "tab-bordered");
+        tab.dataset.tab = `tab-${index}`;
+        tab.textContent = item.label;
+        configTabs.appendChild(tab);
+        
+        const tabPane = document.createElement("div");
+        tabPane.id = `tab-${index}`;
+        tabPane.classList.add("tab-pane");
+        tabPane.innerHTML = `
+          <pre id="pricing-rules-${index}" class="bg-base-200 p-4 rounded-lg mb-4"></pre>
+          <div class="bg-base-200 p-4 rounded-lg">${item.input}</div>
+        `;
+        tabContent.appendChild(tabPane);
+        
+        displayPricingRules(index);
+        
+        tab.addEventListener("click", () => {
+          configTabs.querySelectorAll(".tab").forEach(t => t.classList.remove("tab-active"));
+          tabContent.querySelectorAll(".tab-pane").forEach(pane => pane.classList.remove("active"));
+          
+          tab.classList.add("tab-active");
+          tabPane.classList.add("active");
+          
+          calculatePrice(index);
+        });
+        
+        // Auto-select the first tab
+        if (index === 0) {
+          tab.classList.add("tab-active");
+          tabPane.classList.add("active");
+        }
+      });
       
-      calculatePrice(index);
-    });
-    
-    // Auto-select the first tab
-    if (index === 0) {
-      tab.classList.add("tab-active");
-      tabPane.classList.add("active");
+      // Calculate the price for the first tab
+      calculatePrice(0);
     }
-  });
-  
-  // Calculate the price for the first tab
-  calculatePrice(0);
-}
     
     generateTabs();
     calculatePrice(0);
